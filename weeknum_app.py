@@ -893,9 +893,11 @@ class InfoDialog(QDialog):
 
         title = QLabel("WeekNum App")
         title.setObjectName("InfoTitle")
+        project = QLabel("Project: https://github.com/pbuzdygan/weeknum")
+
         author = QLabel("Author: Przemyslaw Buzdygan")
         github = QLabel("GitHub: https://www.github.com/pbuzdygan")
-        project = QLabel("Project: link_to_project_files_on_github")
+        
         version = QLabel(f"Version: {APP_VERSION}")
 
         close_btn = QPushButton("Close")
