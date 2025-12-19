@@ -9,4 +9,4 @@
 - Windows 11 style calendar with week numbers
 - built-in month/year picker in the same window
 - Today button
-- optional week number widget with persisted position
+- optional week number dragable widget
