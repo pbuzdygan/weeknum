@@ -1,24 +1,31 @@
-# WeekNum App
+# WeekNum App for Windows
 
-WeekNum App is a lightweight Windows 11 tray application that shows the
+<p align="center">
+  <img src="branding/weeknum_banner.png" alt="WeekNum Banner" width="25%">
+</p>
+
+**WeekNum** App is a lightweight Windows 11 tray application that shows the
 current ISO week number and provides a compact calendar with week numbers.
 It also includes an optional floating widget on the desktop.
 
-Author: Przemyslaw Buzdygan  
-Version: 1.0.0
 
 ## Features
 
 - tray icon with the week number (digits only)
 - tray tooltip with the week number
 - tray context menu (right-click)
-- Info dialog with author and version
+- Info dialog with banner, clickable links, author and version
 - compact calendar shown above the taskbar
 - month/year picker inside the same window (no separate dialog)
 - Today button
 - Pin window option (always on top)
 - optional floating widget that can be shown/hidden
-- widget position is persisted
+- floating, dragable widget
+
+---
+## Demo / Screenshots
+
+Section in prepration
 
 ## Run from source
 
@@ -51,7 +58,7 @@ pip install pyinstaller
 Build:
 
 ```bash
-pyinstaller --noconsole --onefile --name WeekNumApp --clean weeknum_app.py
+pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon branding\\WeekNum.ico --add-data "branding\\weeknum_banner.png;branding" --add-data "branding\\WeekNum.ico;branding" weeknum_app.py
 ```
 
 The EXE will be located in the `dist` directory.
