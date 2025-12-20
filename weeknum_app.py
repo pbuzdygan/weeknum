@@ -61,6 +61,19 @@ def set_windows_autostart_enabled(enabled: bool) -> bool:
     except Exception:
         return False
 
+def windows_set_appusermodel_id(app_id: str) -> None:
+    """
+    Best-effort: on Windows this affects how the app is identified in notifications/taskbar
+    (e.g., avoids showing the raw EXE name in some shells).
+    """
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
+
 # Typography (Fluent-like)
 # Qt's text rendering can be uneven with variable fonts on Windows.
 # Use the non-variable Segoe UI to keep weights consistent.
@@ -1120,10 +1133,12 @@ class FluentMenu(QWidget):
 
 class TrayApp:
     def __init__(self):
+        windows_set_appusermodel_id(APP_NAME)
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
         self.app.setFont(QFont(FONT_FAMILY))
         QToolTip.setFont(QFont(FONT_FAMILY))
+        self.app.setApplicationDisplayName(APP_NAME)
 
         app_icon = QIcon(resource_path("branding", "WeekNum.ico"))
         if not app_icon.isNull():
@@ -1324,7 +1339,7 @@ class TrayApp:
             self.autostart_action.setChecked(not enabled)
             self.autostart_action.blockSignals(False)
             self.tray.showMessage(
-                "WeekNum",
+                APP_NAME,
                 "Failed to update autostart setting.",
                 QSystemTrayIcon.Warning,
                 3000,
@@ -1332,7 +1347,7 @@ class TrayApp:
             return
 
         self.tray.showMessage(
-            "WeekNum",
+            APP_NAME,
             "Autostart enabled." if enabled else "Autostart disabled.",
             QSystemTrayIcon.Information,
             2000,
