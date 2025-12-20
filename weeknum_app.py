@@ -1333,31 +1333,23 @@ class TrayApp:
         self.toggle_badge_action.setText("Hide widget" if visible else "Show widget")
 
     def toggle_autostart(self, enabled: bool):
-        previous_icon = self.tray.icon()
-        if not self.app_icon.isNull():
-            self.tray.setIcon(self.app_icon)
-
         ok = set_windows_autostart_enabled(bool(enabled))
         if not ok:
             self.autostart_action.blockSignals(True)
             self.autostart_action.setChecked(not enabled)
             self.autostart_action.blockSignals(False)
             self.tray.showMessage(
-                APP_NAME,
                 "Failed to update autostart setting.",
                 QSystemTrayIcon.Warning,
                 3000,
             )
-            QTimer.singleShot(500, lambda: self.tray.setIcon(previous_icon))
             return
 
         self.tray.showMessage(
-            APP_NAME,
             "Autostart enabled." if enabled else "Autostart disabled.",
             QSystemTrayIcon.Information,
             2000,
         )
-        QTimer.singleShot(500, lambda: self.tray.setIcon(previous_icon))
 
     def quit(self):
         if self.badge:
