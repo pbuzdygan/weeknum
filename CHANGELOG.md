@@ -7,8 +7,8 @@
 ## 1.0.1
 
 - Info dialog: added banner and clickable links
-- Packaging: bundle `branding/weeknum_banner.png` and `branding/WeekNum.ico` for PyInstaller onefile builds
-- App icon: set window/tray icon from `branding/WeekNum.ico` (when available)
+- Packaging: bundle `branding/weeknum_banner.png` and `icons/WeekNum.ico` for PyInstaller onefile builds
+- App icon: set window/tray icon from `icons/WeekNum.ico` (when available)
 
 ## 1.0.0
 

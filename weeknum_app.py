@@ -1125,7 +1125,7 @@ class TrayApp:
         self.app.setFont(QFont(FONT_FAMILY))
         QToolTip.setFont(QFont(FONT_FAMILY))
 
-        self.app_icon = QIcon(resource_path("branding", "WeekNum.ico"))
+        self.app_icon = QIcon(resource_path("icons", "WeekNum.ico"))
         if not self.app_icon.isNull():
             self.app.setWindowIcon(self.app_icon)
 

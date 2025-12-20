@@ -59,7 +59,7 @@ pip install pyinstaller
 Build:
 
 ```bash
-pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon branding\\WeekNum.ico --add-data "branding\\weeknum_banner.png;branding" --add-data "branding\\WeekNum.ico;branding" weeknum_app.py
+pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\\WeekNum.ico --add-data "branding\\weeknum_banner.png;branding" --add-data "icons\\WeekNum.ico;icons" weeknum_app.py
 ```
 
 The EXE will be located in the `dist` directory.
