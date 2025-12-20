@@ -26,7 +26,15 @@ It also includes an optional floating widget on the desktop.
 ---
 ## Demo / Screenshots
 
-Section in prepration
+### Main UI
+<p align="center">
+  <img src="branding/0_dark.png" width="45%" alt="Main window Dark">
+  <img src="branding/0_light.png" width="45%" alt="Main window Light">
+</p>
+<p align="center">
+  <img src="branding/1_dark.png" width="45%" alt="Menu Dark">
+  <img src="branding/1_light.png" width="45%" alt="Menu Light">
+</p>
 
 ## Download ready app
 
