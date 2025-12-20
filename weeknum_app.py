@@ -1,6 +1,7 @@
 import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSettings, QEvent
 from PySide6.QtGui import (
@@ -891,22 +892,41 @@ class InfoDialog(QDialog):
         shell_layout.setSpacing(8)
         root.addWidget(self.shell)
 
-        title = QLabel("WeekNum App")
-        title.setObjectName("InfoTitle")
-        project = QLabel("Project: https://github.com/pbuzdygan/weeknum")
+        banner = QLabel()
+        banner.setObjectName("InfoBanner")
+        banner.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        banner_path = Path(__file__).resolve().parent / "branding" / "weeknum_banner.png"
+        banner_pix = QPixmap(str(banner_path))
+        if banner_pix.isNull():
+            banner.setText("WeekNum App")
+            banner.setObjectName("InfoTitle")
+        else:
+            banner.setPixmap(banner_pix.scaledToHeight(72, Qt.SmoothTransformation))
+        project = QLabel(
+            'Project: <a href="https://github.com/pbuzdygan/weeknum">https://github.com/pbuzdygan/weeknum</a>'
+        )
+        project.setTextFormat(Qt.TextFormat.RichText)
+        project.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        project.setOpenExternalLinks(True)
 
         author = QLabel("Author: Przemyslaw Buzdygan")
-        github = QLabel("GitHub: https://www.github.com/pbuzdygan")
-        
+
+        github = QLabel(
+            'GitHub: <a href="https://www.github.com/pbuzdygan">https://www.github.com/pbuzdygan</a>'
+        )
+        github.setTextFormat(Qt.TextFormat.RichText)
+        github.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        github.setOpenExternalLinks(True)
+
         version = QLabel(f"Version: {APP_VERSION}")
 
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
 
-        shell_layout.addWidget(title)
+        shell_layout.addWidget(banner)
+        shell_layout.addWidget(project)
         shell_layout.addWidget(author)
         shell_layout.addWidget(github)
-        shell_layout.addWidget(project)
         shell_layout.addWidget(version)
         shell_layout.addSpacing(6)
         shell_layout.addWidget(close_btn, 0, Qt.AlignRight)
