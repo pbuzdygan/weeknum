@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,6 +40,36 @@ jobs:
         run: |
           pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\WeekNum.ico --add-data "branding\weeknum_banner.png;branding" --add-data "icons\WeekNum.ico;icons" weeknum_app.py
 
+      - name: Sign EXE (Authenticode)
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          CERT_PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_BASE64)) { throw "Missing secret WINDOWS_CERT_PFX_BASE64" }
+          if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_PASSWORD)) { throw "Missing secret WINDOWS_CERT_PASSWORD" }
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_PFX_BASE64))
+
+          $signtool = Get-ChildItem "C:\\Program Files (x86)\\Windows Kits\\10\\bin" -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+
+          if ([string]::IsNullOrWhiteSpace($signtool) -or !(Test-Path $signtool)) { throw "signtool.exe not found on runner" }
+
+          & $signtool sign `
+            /f $pfxPath `
+            /p $env:CERT_PFX_PASSWORD `
+            /fd SHA256 `
+            /tr "http://timestamp.digicert.com" `
+            /td SHA256 `
+            "dist\\WeekNumApp.exe"
+
+          & $signtool verify /pa /v "dist\\WeekNumApp.exe"
+          Remove-Item -Path $pfxPath -Force
+
       - name: Package (zip)
         shell: pwsh
         run: |
@@ -46,14 +78,39 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.run_number }}" }
           $zipName = "WeekNumApp-$tag-windows-x64.zip"
           Compress-Archive -Path "dist\\WeekNumApp.exe" -DestinationPath $zipName -Force
+          Copy-Item -Path $zipName -Destination (Join-Path $env:RUNNER_TEMP $zipName) -Force
           "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Save ZIP to repo (latest_exe) and push to main
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { throw "Missing release tag name" }
+          $zipName = "${{ env.ZIP_NAME }}"
+          if ([string]::IsNullOrWhiteSpace($zipName)) { throw "Missing ZIP_NAME" }
+          $zipPath = Join-Path $env:RUNNER_TEMP $zipName
+          if (!(Test-Path $zipPath)) { throw "ZIP not found: $zipPath" }
+
+          git fetch origin main
+          git checkout -B main origin/main
+
+          New-Item -ItemType Directory -Force -Path "latest_exe" | Out-Null
+          $dest = "latest_exe\\$zipName"
+          Copy-Item -Path $zipPath -Destination $dest -Force
+
+          git add $dest
+          git status --porcelain
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add $zipName (release artifact)" || exit 0
+          git push origin HEAD:main
 
       - name: Upload artifacts to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/WeekNumApp.exe
             ${{ env.ZIP_NAME }}
           fail_on_unmatched_files: true
 
