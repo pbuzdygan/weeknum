@@ -28,6 +28,15 @@ It also includes an optional floating widget on the desktop.
 
 Section in prepration
 
+## Download ready app
+
+App has been compiled (using method described in **Build Exe (Windows)**)
+and is ready for You to download in repository's folder:
+
+```bash
+/latest_exe/
+```
+
 ## Run from source
 
 Requirements:
