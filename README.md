@@ -53,10 +53,16 @@ Requirements:
 
 Install dependencies:
 
+for PySide6:
+
 ```bash
 pip install PySide6
 ```
+alternatively
 
+```bash
+python -m pip install PySide6
+```
 Run:
 
 ```bash
@@ -72,11 +78,16 @@ Install:
 ```bash
 pip install pyinstaller
 ```
+alternatively
+
+```bash
+python -m pip install pyinstaller
+```
 
 Build:
 
 ```bash
-pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\\WeekNum.ico --add-data "branding\\weeknum_banner.png;branding" --add-data "icons\\WeekNum.ico;icons" weeknum_app.py
+pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\WeekNum.ico --add-data "branding\weeknum_banner.png;branding" --add-data "icons\WeekNum.ico;icons" weeknum_app.py
 ```
 
 The EXE will be located in the `dist` directory.
