@@ -40,35 +40,43 @@ jobs:
         run: |
           pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\WeekNum.ico --add-data "branding\weeknum_banner.png;branding" --add-data "icons\WeekNum.ico;icons" weeknum_app.py
 
-      - name: Sign EXE (Authenticode)
-        if: github.event_name == 'release'
-        shell: pwsh
-        env:
-          CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
-          CERT_PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_BASE64)) { throw "Missing secret WINDOWS_CERT_PFX_BASE64" }
-          if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_PASSWORD)) { throw "Missing secret WINDOWS_CERT_PASSWORD" }
-
-          $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
-          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_PFX_BASE64))
-
-          $signtool = Get-ChildItem "C:\\Program Files (x86)\\Windows Kits\\10\\bin" -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1 -ExpandProperty FullName
-
-          if ([string]::IsNullOrWhiteSpace($signtool) -or !(Test-Path $signtool)) { throw "signtool.exe not found on runner" }
-
-          & $signtool sign `
-            /f $pfxPath `
-            /p $env:CERT_PFX_PASSWORD `
-            /fd SHA256 `
-            /tr "http://timestamp.digicert.com" `
-            /td SHA256 `
-            "dist\\WeekNumApp.exe"
-
-          & $signtool verify /pa /v "dist\\WeekNumApp.exe"
-          Remove-Item -Path $pfxPath -Force
+      # Optional: Authenticode signing (disabled — requires paid Code Signing cert)
+      # Why: without a trusted Authenticode signature, Windows SmartScreen may show "Unknown publisher".
+      # How to enable later:
+      # - Create GitHub secrets:
+      #   - WINDOWS_CERT_PFX_BASE64: base64 of the .pfx
+      #   - WINDOWS_CERT_PASSWORD: password for the .pfx
+      # - Uncomment the step below.
+      #
+      # - name: Sign EXE (Authenticode)
+      #   if: github.event_name == 'release'
+      #   shell: pwsh
+      #   env:
+      #     CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      #     CERT_PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      #   run: |
+      #     if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_BASE64)) { throw "Missing secret WINDOWS_CERT_PFX_BASE64" }
+      #     if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_PASSWORD)) { throw "Missing secret WINDOWS_CERT_PASSWORD" }
+      #
+      #     $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+      #     [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_PFX_BASE64))
+      #
+      #     $signtool = Get-ChildItem "C:\\Program Files (x86)\\Windows Kits\\10\\bin" -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue |
+      #       Sort-Object FullName -Descending |
+      #       Select-Object -First 1 -ExpandProperty FullName
+      #
+      #     if ([string]::IsNullOrWhiteSpace($signtool) -or !(Test-Path $signtool)) { throw "signtool.exe not found on runner" }
+      #
+      #     & $signtool sign `
+      #       /f $pfxPath `
+      #       /p $env:CERT_PFX_PASSWORD `
+      #       /fd SHA256 `
+      #       /tr "http://timestamp.digicert.com" `
+      #       /td SHA256 `
+      #       "dist\\WeekNumApp.exe"
+      #
+      #     & $signtool verify /pa /v "dist\\WeekNumApp.exe"
+      #     Remove-Item -Path $pfxPath -Force
 
       - name: Package (zip)
         shell: pwsh
