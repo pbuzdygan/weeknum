@@ -904,7 +904,12 @@ class InfoDialog(QDialog):
             banner.setText("WeekNum App")
             banner.setObjectName("InfoTitle")
         else:
-            banner.setPixmap(banner_pix)
+            scale = 0.25
+            target_w = max(1, int(banner_pix.width() * scale))
+            target_h = max(1, int(banner_pix.height() * scale))
+            banner.setPixmap(
+                banner_pix.scaled(target_w, target_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
             banner.setScaledContents(False)
             banner.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         project = QLabel(
