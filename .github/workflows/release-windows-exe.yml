@@ -25,12 +25,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if (Test-Path "requirements.txt") {
-            $req = (Get-Content "requirements.txt" -Raw).Trim()
-            if ($req.Length -gt 0) {
-              pip install -r requirements.txt
+            $req = Get-Content "requirements.txt" -Raw -ErrorAction SilentlyContinue
+            if ($null -ne $req) { $req = $req.Trim() }
+            if (-not [string]::IsNullOrWhiteSpace($req)) {
+              python -m pip install -r requirements.txt
             }
           }
-          pip install pyinstaller
+          python -m pip install pyinstaller
 
       - name: Build EXE (PyInstaller)
         shell: pwsh
