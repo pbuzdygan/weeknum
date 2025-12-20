@@ -1140,9 +1140,9 @@ class TrayApp:
         QToolTip.setFont(QFont(FONT_FAMILY))
         self.app.setApplicationDisplayName(APP_NAME)
 
-        app_icon = QIcon(resource_path("branding", "WeekNum.ico"))
-        if not app_icon.isNull():
-            self.app.setWindowIcon(app_icon)
+        self.app_icon = QIcon(resource_path("branding", "WeekNum.ico"))
+        if not self.app_icon.isNull():
+            self.app.setWindowIcon(self.app_icon)
 
         QSettings.setDefaultFormat(QSettings.IniFormat)
         self.settings = QSettings(APP_ORG, APP_NAME)
@@ -1158,7 +1158,7 @@ class TrayApp:
 
         self.tray = QSystemTrayIcon()
         fallback = self.app.style().standardIcon(QStyle.SP_MessageBoxInformation)
-        self.tray.setIcon(app_icon if not app_icon.isNull() else fallback)
+        self.tray.setIcon(self.app_icon if not self.app_icon.isNull() else fallback)
 
         self.menu = FluentMenu()
         self.menu.setStyleSheet(self.styles["menu"])
@@ -1333,6 +1333,10 @@ class TrayApp:
         self.toggle_badge_action.setText("Hide widget" if visible else "Show widget")
 
     def toggle_autostart(self, enabled: bool):
+        previous_icon = self.tray.icon()
+        if not self.app_icon.isNull():
+            self.tray.setIcon(self.app_icon)
+
         ok = set_windows_autostart_enabled(bool(enabled))
         if not ok:
             self.autostart_action.blockSignals(True)
@@ -1344,6 +1348,7 @@ class TrayApp:
                 QSystemTrayIcon.Warning,
                 3000,
             )
+            QTimer.singleShot(500, lambda: self.tray.setIcon(previous_icon))
             return
 
         self.tray.showMessage(
@@ -1352,6 +1357,7 @@ class TrayApp:
             QSystemTrayIcon.Information,
             2000,
         )
+        QTimer.singleShot(500, lambda: self.tray.setIcon(previous_icon))
 
     def quit(self):
         if self.badge:
