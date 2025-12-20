@@ -1338,17 +1338,25 @@ class TrayApp:
             self.autostart_action.blockSignals(True)
             self.autostart_action.setChecked(not enabled)
             self.autostart_action.blockSignals(False)
-            self.tray.showMessage(
-                "Failed to update autostart setting.",
-                QSystemTrayIcon.Warning,
-                3000,
+            QTimer.singleShot(
+                100,
+                lambda: self.tray.showMessage(
+                    "WeekNum",
+                    "Failed to update autostart setting.",
+                    QSystemTrayIcon.Warning,
+                    3000,
+                ),
             )
             return
 
-        self.tray.showMessage(
-            "Autostart enabled." if enabled else "Autostart disabled.",
-            QSystemTrayIcon.Information,
-            2000,
+        QTimer.singleShot(
+            100,
+            lambda: self.tray.showMessage(
+                "WeekNum",
+                "Autostart enabled." if enabled else "Autostart disabled.",
+                QSystemTrayIcon.Information,
+                2000,
+            ),
         )
 
     def quit(self):
