@@ -15,11 +15,51 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.1.0"
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return str(base.joinpath(*parts))
+
+def _autostart_registry_name() -> str:
+    return APP_NAME
+
+def _autostart_command() -> str:
+    if getattr(sys, "frozen", False):
+        return f"\"{sys.executable}\""
+    script_path = str(Path(__file__).resolve())
+    return f"\"{sys.executable}\" \"{script_path}\""
+
+def get_windows_autostart_enabled() -> bool:
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ) as key:
+            winreg.QueryValueEx(key, _autostart_registry_name())
+        return True
+    except Exception:
+        return False
+
+def set_windows_autostart_enabled(enabled: bool) -> bool:
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE) as key:
+            name = _autostart_registry_name()
+            if enabled:
+                winreg.SetValueEx(key, name, 0, winreg.REG_SZ, _autostart_command())
+            else:
+                try:
+                    winreg.DeleteValue(key, name)
+                except FileNotFoundError:
+                    pass
+        return True
+    except Exception:
+        return False
 
 # Typography (Fluent-like)
 # Qt's text rendering can be uneven with variable fonts on Windows.
@@ -1130,7 +1170,17 @@ class TrayApp:
         self.toggle_badge_action.setText("Hide widget" if show_badge else "Show widget")
         self.toggle_badge_action.toggled.connect(self.set_badge_visible)
 
+        # autostart toggle (Windows)
+        self.autostart_action = QAction("Autostart")
+        self.autostart_action.setCheckable(True)
+        if sys.platform.startswith("win"):
+            self.autostart_action.setChecked(get_windows_autostart_enabled())
+            self.autostart_action.toggled.connect(self.toggle_autostart)
+        else:
+            self.autostart_action.setEnabled(False)
+
         self.menu.add_action(self.toggle_badge_action)
+        self.menu.add_action(self.autostart_action)
         self.menu.add_separator()
         self.menu.add_action(self.open_action)
         self.menu.add_action(self.info_action)
@@ -1266,6 +1316,27 @@ class TrayApp:
         if self.badge:
             self.badge.setVisible(visible)
         self.toggle_badge_action.setText("Hide widget" if visible else "Show widget")
+
+    def toggle_autostart(self, enabled: bool):
+        ok = set_windows_autostart_enabled(bool(enabled))
+        if not ok:
+            self.autostart_action.blockSignals(True)
+            self.autostart_action.setChecked(not enabled)
+            self.autostart_action.blockSignals(False)
+            self.tray.showMessage(
+                "WeekNum",
+                "Failed to update autostart setting.",
+                QSystemTrayIcon.Warning,
+                3000,
+            )
+            return
+
+        self.tray.showMessage(
+            "WeekNum",
+            "Autostart enabled." if enabled else "Autostart disabled.",
+            QSystemTrayIcon.Information,
+            2000,
+        )
 
     def quit(self):
         if self.badge:
