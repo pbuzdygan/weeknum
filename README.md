@@ -21,6 +21,7 @@ It also includes an optional floating widget on the desktop.
 - Pin window option (always on top)
 - optional floating widget that can be shown/hidden
 - floating, dragable widget
+- **WeekNum Autostart** can be enabled/disabled from menu
 
 ---
 ## Demo / Screenshots

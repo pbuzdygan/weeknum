@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- WeekNum Autostart: toggle start with Windows from tray menu
+
 ## 1.0.1
 
 - Info dialog: added banner and clickable links
