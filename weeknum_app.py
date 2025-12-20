@@ -10,7 +10,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication, QSystemTrayIcon, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QGridLayout, QFrame, QDialog, QStyle, QStackedLayout,
-    QToolTip
+    QToolTip, QSizePolicy
 )
 
 APP_ORG = "WeekNum"
@@ -904,7 +904,9 @@ class InfoDialog(QDialog):
             banner.setText("WeekNum App")
             banner.setObjectName("InfoTitle")
         else:
-            banner.setPixmap(banner_pix.scaledToHeight(72, Qt.SmoothTransformation))
+            banner.setPixmap(banner_pix)
+            banner.setScaledContents(False)
+            banner.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         project = QLabel(
             'Project: <a href="https://github.com/pbuzdygan/weeknum">https://github.com/pbuzdygan/weeknum</a>'
         )
@@ -926,11 +928,23 @@ class InfoDialog(QDialog):
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
 
-        shell_layout.addWidget(banner)
-        shell_layout.addWidget(project)
-        shell_layout.addWidget(author)
-        shell_layout.addWidget(github)
-        shell_layout.addWidget(version)
+        content_row = QHBoxLayout()
+        content_row.setSpacing(12)
+        shell_layout.addLayout(content_row)
+
+        content_row.addWidget(banner, 0, Qt.AlignLeft)
+
+        text_col = QVBoxLayout()
+        text_col.setSpacing(6)
+        content_row.addLayout(text_col, 1)
+
+        text_col.addStretch(1)
+        text_col.addWidget(project, 0, Qt.AlignHCenter)
+        text_col.addWidget(author, 0, Qt.AlignHCenter)
+        text_col.addWidget(github, 0, Qt.AlignHCenter)
+        text_col.addWidget(version, 0, Qt.AlignHCenter)
+        text_col.addStretch(1)
+
         shell_layout.addSpacing(6)
         shell_layout.addWidget(close_btn, 0, Qt.AlignRight)
 
