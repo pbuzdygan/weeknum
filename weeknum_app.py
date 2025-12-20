@@ -17,6 +17,10 @@ APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
 APP_VERSION = "1.0.0"
 
+def resource_path(*parts: str) -> str:
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return str(base.joinpath(*parts))
+
 # Typography (Fluent-like)
 # Qt's text rendering can be uneven with variable fonts on Windows.
 # Use the non-variable Segoe UI to keep weights consistent.
@@ -895,8 +899,7 @@ class InfoDialog(QDialog):
         banner = QLabel()
         banner.setObjectName("InfoBanner")
         banner.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        banner_path = Path(__file__).resolve().parent / "branding" / "weeknum_banner.png"
-        banner_pix = QPixmap(str(banner_path))
+        banner_pix = QPixmap(resource_path("branding", "weeknum_banner.png"))
         if banner_pix.isNull():
             banner.setText("WeekNum App")
             banner.setObjectName("InfoTitle")
@@ -1063,6 +1066,10 @@ class TrayApp:
         self.app.setFont(QFont(FONT_FAMILY))
         QToolTip.setFont(QFont(FONT_FAMILY))
 
+        app_icon = QIcon(resource_path("branding", "WeekNum.ico"))
+        if not app_icon.isNull():
+            self.app.setWindowIcon(app_icon)
+
         QSettings.setDefaultFormat(QSettings.IniFormat)
         self.settings = QSettings(APP_ORG, APP_NAME)
 
@@ -1077,7 +1084,7 @@ class TrayApp:
 
         self.tray = QSystemTrayIcon()
         fallback = self.app.style().standardIcon(QStyle.SP_MessageBoxInformation)
-        self.tray.setIcon(fallback)
+        self.tray.setIcon(app_icon if not app_icon.isNull() else fallback)
 
         self.menu = FluentMenu()
         self.menu.setStyleSheet(self.styles["menu"])
