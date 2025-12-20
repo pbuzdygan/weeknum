@@ -77,6 +77,43 @@ jobs:
       #
       #     & $signtool verify /pa /v "dist\\WeekNumApp.exe"
       #     Remove-Item -Path $pfxPath -Force
+      # Optional: Authenticode signing (disabled — requires paid Code Signing cert)
+      # Why: without a trusted Authenticode signature, Windows SmartScreen may show "Unknown publisher".
+      # How to enable later:
+      # - Create GitHub secrets:
+      #   - WINDOWS_CERT_PFX_BASE64: base64 of the .pfx
+      #   - WINDOWS_CERT_PASSWORD: password for the .pfx
+      # - Uncomment the step below.
+      #
+      # - name: Sign EXE (Authenticode)
+      #   if: github.event_name == 'release'
+      #   shell: pwsh
+      #   env:
+      #     CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      #     CERT_PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      #   run: |
+      #     if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_BASE64)) { throw "Missing secret WINDOWS_CERT_PFX_BASE64" }
+      #     if ([string]::IsNullOrWhiteSpace($env:CERT_PFX_PASSWORD)) { throw "Missing secret WINDOWS_CERT_PASSWORD" }
+      #
+      #     $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+      #     [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_PFX_BASE64))
+      #
+      #     $signtool = Get-ChildItem "C:\\Program Files (x86)\\Windows Kits\\10\\bin" -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue |
+      #       Sort-Object FullName -Descending |
+      #       Select-Object -First 1 -ExpandProperty FullName
+      #
+      #     if ([string]::IsNullOrWhiteSpace($signtool) -or !(Test-Path $signtool)) { throw "signtool.exe not found on runner" }
+      #
+      #     & $signtool sign `
+      #       /f $pfxPath `
+      #       /p $env:CERT_PFX_PASSWORD `
+      #       /fd SHA256 `
+      #       /tr "http://timestamp.digicert.com" `
+      #       /td SHA256 `
+      #       "dist\\WeekNumApp.exe"
+      #
+      #     & $signtool verify /pa /v "dist\\WeekNumApp.exe"
+      #     Remove-Item -Path $pfxPath -Force
 
       - name: Package (zip)
         shell: pwsh
@@ -134,6 +171,50 @@ jobs:
           wix build installer.wxs -o $msiName
           Copy-Item -Path $msiName -Destination (Join-Path $env:RUNNER_TEMP $msiName) -Force
 
+      - name: Build MSI (WiX)
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix
+          $env:PATH = "$env:USERPROFILE\\.dotnet\\tools;$env:PATH"
+
+          $tag = "${{ github.event.release.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "0.0.0" }
+          $ver = $tag.TrimStart('v','V')
+          $parts = $ver.Split('.')
+          if ($parts.Count -lt 3) { $ver = ($parts + @('0','0','0'))[0..2] -join '.' } else { $ver = $parts[0..2] -join '.' }
+
+          $msiName = "WeekNumApp-$tag-windows-x64.msi"
+          "MSI_NAME=$msiName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          @"
+          <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+            <Package Name="WeekNumApp"
+                     Manufacturer="WeekNum"
+                     Version="$ver"
+                     UpgradeCode="D9AF0D14-4F9C-4F46-9E74-0B40E1F0E7F9"
+                     InstallScope="perUser"
+                     Compressed="yes" />
+
+            <MajorUpgrade DowngradeErrorMessage="A newer version of WeekNumApp is already installed." />
+            <MediaTemplate />
+
+            <StandardDirectory Id="UserProfileFolder">
+              <Component Id="WeekNumAppExe" Guid="*">
+                <File Id="WeekNumAppExeFile" Source="dist\WeekNumApp.exe" KeyPath="yes" />
+              </Component>
+            </StandardDirectory>
+
+            <Feature Id="Main" Level="1">
+              <ComponentRef Id="WeekNumAppExe" />
+            </Feature>
+          </Wix>
+          "@ | Set-Content -Encoding UTF8 installer.wxs
+
+          wix build installer.wxs -o $msiName
+          Copy-Item -Path $msiName -Destination (Join-Path $env:RUNNER_TEMP $msiName) -Force
+
       - name: Save ZIP to repo (latest_exe) and push to main
         if: github.event_name == 'release'
         shell: pwsh
@@ -144,6 +225,12 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($zipName)) { throw "Missing ZIP_NAME" }
           $zipPath = Join-Path $env:RUNNER_TEMP $zipName
           if (!(Test-Path $zipPath)) { throw "ZIP not found: $zipPath" }
+          $msiName = "${{ env.MSI_NAME }}"
+          $msiPath = $null
+          if (-not [string]::IsNullOrWhiteSpace($msiName)) {
+            $msiPath = Join-Path $env:RUNNER_TEMP $msiName
+            if (!(Test-Path $msiPath)) { throw "MSI not found: $msiPath" }
+          }
           $msiName = "${{ env.MSI_NAME }}"
           $msiPath = $null
           if (-not [string]::IsNullOrWhiteSpace($msiName)) {
@@ -161,8 +248,13 @@ jobs:
             $destMsi = "latest_exe\\$msiName"
             Copy-Item -Path $msiPath -Destination $destMsi -Force
           }
+          if ($null -ne $msiPath) {
+            $destMsi = "latest_exe\\$msiName"
+            Copy-Item -Path $msiPath -Destination $destMsi -Force
+          }
 
           git add $dest
+          if ($null -ne $msiPath) { git add $destMsi }
           if ($null -ne $msiPath) { git add $destMsi }
           git status --porcelain
           git config user.name "github-actions[bot]"
@@ -177,6 +269,7 @@ jobs:
           files: |
             ${{ env.ZIP_NAME }}
             ${{ env.MSI_NAME }}
+            ${{ env.MSI_NAME }}
           fail_on_unmatched_files: true
 
       - name: Upload workflow artifact
@@ -186,4 +279,5 @@ jobs:
           path: |
             dist/WeekNumApp.exe
             ${{ env.ZIP_NAME }}
+            ${{ env.MSI_NAME }}
             ${{ env.MSI_NAME }}
