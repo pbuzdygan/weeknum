@@ -85,3 +85,11 @@ The EXE will be located in the `dist` directory.
 
 The app stores settings with QSettings (for example, widget position and
 visibility). Data is saved under the user's profile.
+
+## Buy Me a Coffee
+If You like results of my efforts, feel free to show that by supporting me.
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/pbuzdygan)
+<p align="left">
+  <img src="branding/bmc_qr.png" width="25%" alt="BMC QR code">
+</p>
