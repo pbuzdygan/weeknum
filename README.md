@@ -36,14 +36,23 @@ It also includes an optional floating widget on the desktop.
   <img src="branding/1_light.png" width="45%" alt="Menu Light">
 </p>
 
-## Download ready app
+## Download ready to launch WeekNum app
 
-App has been compiled (using method described in **Build Exe (Windows)**)
-and is ready for You to download in repository's folder:
+WeekNum App has been compiled by GitHub Action Flow (using method described in **Build Exe (Windows)**) and is ready for You to download directly from release Assets:
 
-```bash
-/latest_exe/
-```
+<p align="center">
+  <img src="branding/0_zip_file_location.png" width="45%" alt="Zipped exe File location">
+</p>
+
+Auto generated exe file is not digitally signed and has no publisher (reason is primo: that code sign certificates are expensive and secondo: it is for local/home usage) this is why during first app launch You will see info from Microsoft Defender Smart Screen feature:
+
+<p align="center">
+  <img src="branding/0_msdefender_smart_screen.png" width="45%" alt="MS Defender Smart Screen info">
+</p>
+
+You can simply accept info and run app anyway (Steps 1,2,3)
+
+However if You dont trust compiled exe (which is also fine) You can build it locally on Your own following **Build EXE (Windows)**
 
 ## Build EXE (Windows)
 
