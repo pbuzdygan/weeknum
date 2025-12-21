@@ -52,7 +52,7 @@ Auto generated exe file is not digitally signed and has no publisher (reason is 
 
 You can simply accept info and run app anyway (Steps 1,2,3)
 
-However if You dont trust compiled exe (which is also fine) You can build it locally on Your own following **Build EXE (Windows)**
+However if You dont trust compiled exe (which is also fine) You can build it locally on Your own following steps in **Build EXE (Windows)**
 
 And Yes, it is safe to use WeekNum app in corporate/work, unless IT policy is stating different.
 
