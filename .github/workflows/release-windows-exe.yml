@@ -51,7 +51,7 @@ jobs:
           Copy-Item -Path $zipName -Destination (Join-Path $env:RUNNER_TEMP $zipName) -Force
           "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Save ZIP to repo (latest_exe) and push to main
+      - name: Save ZIP to repo (latest_exe) and push to target branch
         if: github.event_name == 'release'
         shell: pwsh
         run: |
@@ -62,8 +62,12 @@ jobs:
           $zipPath = Join-Path $env:RUNNER_TEMP $zipName
           if (!(Test-Path $zipPath)) { throw "ZIP not found: $zipPath" }
 
-          git fetch origin main
-          git checkout -B main origin/main
+          $target = "${{ github.event.release.target_commitish }}"
+          if ([string]::IsNullOrWhiteSpace($target)) { $target = "main" }
+          if (@("main","dev") -notcontains $target) { throw "Unsupported target branch: $target" }
+
+          git fetch origin $target
+          git checkout -B $target "origin/$target"
 
           New-Item -ItemType Directory -Force -Path "latest_exe" | Out-Null
           $dest = "latest_exe\\$zipName"
@@ -74,7 +78,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "Add $zipName (release artifact)" || exit 0
-          git push origin HEAD:main
+          git push origin "HEAD:$target"
 
       - name: Upload artifacts to Release
         if: github.event_name == 'release'
