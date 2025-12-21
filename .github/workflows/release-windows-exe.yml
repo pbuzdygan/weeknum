@@ -162,7 +162,7 @@ jobs:
               <MajorUpgrade DowngradeErrorMessage="A newer version of WeekNumApp is already installed." />
               <MediaTemplate />
 
-              <StandardDirectory Id="UserProfileFolder">
+              <StandardDirectory Id="PersonalFolder">
                 <Component Id="WeekNumAppExe" Guid="*">
                   <File Id="WeekNumAppExeFile" Source="dist\WeekNumApp.exe" KeyPath="yes" />
                 </Component>
