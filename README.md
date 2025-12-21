@@ -1,12 +1,12 @@
-[![Release](https://img.shields.io/github/v/release/pbuzdygan/weeknum?display_name=tag&sort=semver)](https://github.com/pbuzdygan/weeknum/releases/latest)
-[![Downloads total](https://img.shields.io/github/downloads/pbuzdygan/weeknum/total)](https://github.com/pbuzdygan/weeknum/releases)
-[![Downloads latest](https://img.shields.io/github/downloads/pbuzdygan/weeknum/latest/total)](https://github.com/pbuzdygan/weeknum/releases/latest)
-
 [![Stars](https://img.shields.io/github/stars/pbuzdygan/weeknum)](https://github.com/pbuzdygan/weeknum/stargazers)
 [![Forks](https://img.shields.io/github/forks/pbuzdygan/weeknum)](https://github.com/pbuzdygan/weeknum/network/members)
 [![Issues](https://img.shields.io/github/issues/pbuzdygan/weeknum)](https://github.com/pbuzdygan/weeknum/issues)
 [![Last commit](https://img.shields.io/github/last-commit/pbuzdygan/weeknum)](https://github.com/pbuzdygan/weeknum/commits/main)
 [![License](https://img.shields.io/github/license/pbuzdygan/weeknum)](LICENSE)
+
+[![Release](https://img.shields.io/github/v/release/pbuzdygan/weeknum?display_name=tag&sort=semver)](https://github.com/pbuzdygan/weeknum/releases/latest)
+[![Downloads total](https://img.shields.io/github/downloads/pbuzdygan/weeknum/total)](https://github.com/pbuzdygan/weeknum/releases)
+[![Downloads latest](https://img.shields.io/github/downloads/pbuzdygan/weeknum/latest/total)](https://github.com/pbuzdygan/weeknum/releases/latest)
 
 # WeekNum App for Windows
 
