@@ -41,7 +41,7 @@ It also includes an optional floating widget on the desktop.
 WeekNum App has been compiled by GitHub Action Flow (using method described in **Build Exe (Windows)**) and is ready for You to download directly from release Assets:
 
 <p align="center">
-  <img src="branding/0_zip_file_location.png" width="45%" alt="Zipped exe File location">
+  <img src="branding/0_zip_file_location.png" width="80%" alt="Zipped exe File location">
 </p>
 
 Auto generated exe file is not digitally signed and has no publisher (reason is primo: that code sign certificates are expensive and secondo: it is for local/home usage) this is why during first app launch You will see info from Microsoft Defender Smart Screen feature:
