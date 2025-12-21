@@ -54,6 +54,8 @@ You can simply accept info and run app anyway (Steps 1,2,3)
 
 However if You dont trust compiled exe (which is also fine) You can build it locally on Your own following **Build EXE (Windows)**
 
+And Yes, it is safe to use WeekNum app in corporate/work, unless IT policy is stating different.
+
 ## Build EXE (Windows)
 
 The simplest option is PyInstaller.
