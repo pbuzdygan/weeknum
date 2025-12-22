@@ -553,10 +553,14 @@ class CalendarWindow(QWidget):
     def _apply_window_flags(self):
         # Flyout behavior (Popup) unless pinned
         if self._pinned:
-            self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
+            self.setWindowFlags(
+                Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
+            )
             self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
         else:
-            self.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint)
+            self.setWindowFlags(
+                Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
+            )
 
     def apply_theme(self, theme: Theme):
         self._theme = theme
@@ -923,7 +927,7 @@ class InfoDialog(QDialog):
         # Transparent outer window so rounded shell corners don't show a square backdrop
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
-        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -1053,7 +1057,7 @@ class MenuItem(QWidget):
 
 class FluentMenu(QWidget):
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.Popup | Qt.FramelessWindowHint)
+        super().__init__(parent, Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
 
