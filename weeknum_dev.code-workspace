@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"uri": "vscode-remote://wsl+Debian/mnt/c/Users/buzuser/github_repo/weeknum_dev"
+		}
+	],
+	"settings": {
+		"remote.WSL.defaultDistro": "Debian"
+	},
+	"remoteAuthority": "wsl+Debian"
+}
