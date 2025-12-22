@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- ADD: enhance Windows EXE build process with version metadata support
+
 ## 1.1.0
 
 - WeekNum Autostart: toggle start with Windows from tray menu
