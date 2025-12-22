@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install deps",
+      "type": "shell",
+      "command": "python3 -m pip install -r requirements.txt",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run app",
+      "type": "shell",
+      "command": "python3 weeknum_app.py",
+      "problemMatcher": []
+    },
+    {
+      "label": "Git: status",
+      "type": "shell",
+      "command": "git status -sb",
+      "problemMatcher": []
+    },
+    {
+      "label": "Git: checkout dev",
+      "type": "shell",
+      "command": "git checkout dev",
+      "problemMatcher": []
+    },
+    {
+      "label": "Git: add all",
+      "type": "shell",
+      "command": "git add -A",
+      "problemMatcher": []
+    },
+    {
+      "label": "Git: commit (prompt)",
+      "type": "shell",
+      "command": "git commit -m \"${input:commitMessage}\"",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "commitMessage",
+      "type": "promptString",
+      "description": "Commit message"
+    }
+  ]
+}

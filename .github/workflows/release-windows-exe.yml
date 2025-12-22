@@ -35,10 +35,31 @@ jobs:
           }
           python -m pip install pyinstaller
 
+      - name: Prepare version info
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "0.0.0" }
+          $ver = $tag.TrimStart("v", "V")
+          $major = 0; $minor = 0; $patch = 0; $build = 0
+          if ($ver -match '^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?') {
+            $major = [int]$Matches[1]
+            $minor = [int]$Matches[2]
+            $patch = [int]$Matches[3]
+            if ($Matches[4]) { $build = [int]$Matches[4] }
+          }
+          $versionTuple = "$major, $minor, $patch, $build"
+          $versionStr = "$major.$minor.$patch.$build"
+          (Get-Content "version_info.txt" -Raw) `
+            -replace "__VERSION_TUPLE__", $versionTuple `
+            -replace "__VERSION_STR__", $versionStr `
+            | Set-Content "version_info.txt" -Encoding UTF8
+
       - name: Build EXE (PyInstaller)
         shell: pwsh
         run: |
-          pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\WeekNum.ico --add-data "branding\weeknum_banner.png;branding" --add-data "icons\WeekNum.ico;icons" weeknum_app.py
+          pyinstaller --noconsole --onefile --name WeekNumApp --clean --icon icons\WeekNum.ico --add-data "branding\weeknum_banner.png;branding" --add-data "icons\WeekNum.ico;icons" --version-file version_info.txt weeknum_app.py
 
       - name: Package (zip)
         shell: pwsh
