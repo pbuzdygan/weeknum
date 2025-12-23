@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+
+- UI improvements for months and years picking and checking
+- UI new layout for month picker function - now including info about quarter of the year
+
 ## 1.1.1
 
 - ADD: enhance Windows EXE build process with version metadata support
