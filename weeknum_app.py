@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSettings, QEvent
+from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF
 from PySide6.QtGui import (
-    QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor
+    QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF
 )
 from PySide6.QtWidgets import (
     QApplication, QSystemTrayIcon, QWidget, QVBoxLayout, QHBoxLayout,
@@ -198,6 +198,49 @@ def make_week_icon(
     return icon
 
 
+def make_filled_triangle_icon(direction: str, color: QColor) -> QIcon:
+    """
+    Crisp, filled left/right triangle icon.
+    Using font glyphs (◀/▶) can look jagged depending on font fallback/hinting.
+    """
+    if direction not in ("left", "right"):
+        raise ValueError("direction must be 'left' or 'right'")
+
+    def draw(size: int, scale: int) -> QPixmap:
+        pm = QPixmap(size * scale, size * scale)
+        pm.setDevicePixelRatio(scale)
+        pm.fill(Qt.transparent)
+
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setPen(Qt.NoPen)
+        p.setBrush(color)
+
+        m = size * 0.16  # margin
+        if direction == "left":
+            pts = [
+                QPointF(size - m, m),
+                QPointF(size - m, size - m),
+                QPointF(m, size / 2),
+            ]
+        else:
+            pts = [
+                QPointF(m, m),
+                QPointF(m, size - m),
+                QPointF(size - m, size / 2),
+            ]
+
+        p.drawPolygon(QPolygonF(pts))
+        p.end()
+        return pm
+
+    icon = QIcon()
+    for size in (14, 16, 18, 20, 24):
+        for scale in (1, 2):
+            icon.addPixmap(draw(size, scale))
+    return icon
+
+
 # ---------------- ISO helpers ----------------
 def iso_week(d: date) -> int:
     return d.isocalendar().week
@@ -290,6 +333,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QPushButton#NavButton {{
             background: transparent; border: none; border-radius: 8px;
             padding: 6px 10px; font-size: {FONT_NAV_PX}px; min-width: 34px; min-height: 38px;
+            text-align: center;
             color: {text_primary};
         }}
         QPushButton#TodayButton {{
@@ -305,6 +349,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QPushButton#PickerNavButton {{
             background: transparent; border: none; border-radius: 8px;
             padding: 4px 10px; font-size: {FONT_NAV_PX}px; min-height: 32px;
+            text-align: center;
             color: {text_primary};
         }}
 
@@ -447,8 +492,8 @@ class CalendarWindow(QWidget):
         self.month_btn.setObjectName("MonthButton")
         self.month_btn.clicked.connect(self.toggle_picker)
 
-        self.prev_btn = QPushButton("◀")
-        self.next_btn = QPushButton("▶")
+        self.prev_btn = QPushButton("")
+        self.next_btn = QPushButton("")
         self.prev_btn.setObjectName("NavButton")
         self.next_btn.setObjectName("NavButton")
 
@@ -494,8 +539,8 @@ class CalendarWindow(QWidget):
         picker_layout.setSpacing(8)
 
         picker_top = QHBoxLayout()
-        self.picker_prev_years_btn = QPushButton("◀")
-        self.picker_next_years_btn = QPushButton("▶")
+        self.picker_prev_years_btn = QPushButton("")
+        self.picker_next_years_btn = QPushButton("")
         self.picker_prev_years_btn.setObjectName("PickerNavButton")
         self.picker_next_years_btn.setObjectName("PickerNavButton")
 
@@ -566,6 +611,27 @@ class CalendarWindow(QWidget):
         self._theme = theme
         styles = build_styles(theme)
         self.setStyleSheet(styles["calendar"])
+        self._apply_nav_icons()
+
+    def _apply_nav_icons(self):
+        color = QColor(255, 255, 255) if self._theme.mode == "dark" else QColor(31, 31, 31)
+        icon_size = QSize(18, 18)
+
+        self.prev_btn.setText("")
+        self.prev_btn.setIcon(make_filled_triangle_icon("left", color))
+        self.prev_btn.setIconSize(icon_size)
+
+        self.next_btn.setText("")
+        self.next_btn.setIcon(make_filled_triangle_icon("right", color))
+        self.next_btn.setIconSize(icon_size)
+
+        self.picker_prev_years_btn.setText("")
+        self.picker_prev_years_btn.setIcon(make_filled_triangle_icon("left", color))
+        self.picker_prev_years_btn.setIconSize(icon_size)
+
+        self.picker_next_years_btn.setText("")
+        self.picker_next_years_btn.setIcon(make_filled_triangle_icon("right", color))
+        self.picker_next_years_btn.setIconSize(icon_size)
 
     def keyPressEvent(self, e: QKeyEvent):
         if e.key() == Qt.Key_Left:
