@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -387,7 +387,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
         QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
-            padding: 6px 8px; min-height: 34px;
+            padding: 5px 8px; min-height: 32px;
             color: {text_primary};
         }}
         QPushButton[year] {{
@@ -612,7 +612,7 @@ class CalendarWindow(QWidget):
         months_layout = QGridLayout(months_widget)
         months_layout.setContentsMargins(0, 0, 0, 0)
         months_layout.setHorizontalSpacing(4)
-        months_layout.setVerticalSpacing(3)
+        months_layout.setVerticalSpacing(2)
         months_layout.setColumnStretch(0, 1)
         for c in range(1, 4):
             months_layout.setColumnStretch(c, 4)
@@ -1359,11 +1359,11 @@ class TrayApp:
             self.autostart_action.setEnabled(False)
 
         self.menu.add_action(self.toggle_badge_action)
+        self.menu.add_action(self.pin_action)
         self.menu.add_action(self.autostart_action)
         self.menu.add_separator()
         self.menu.add_action(self.open_action)
         self.menu.add_action(self.info_action)
-        self.menu.add_action(self.pin_action)
         self.menu.add_separator()
         self.menu.add_action(self.quit_action)
 
