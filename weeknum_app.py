@@ -283,6 +283,10 @@ ENG_MONTHS = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
 ]
+ENG_MONTHS_SHORT = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+]
 DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
@@ -412,6 +416,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QPushButton[currentYear="true"] {{ background: {press}; }}
 
         QLabel#DowLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 400; }}
+        QLabel#QuarterLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 600; }}
         QFrame[cellRole="day"] {{ background: transparent; border-radius: 8px; }}
         QFrame[cellRole="day"][weekCurrent="true"] {{ background: {week_bg}; }}
         QFrame[cellRole="day"]:hover {{ background: {hover}; }}
@@ -608,16 +613,25 @@ class CalendarWindow(QWidget):
         months_layout.setContentsMargins(0, 0, 0, 0)
         months_layout.setHorizontalSpacing(4)
         months_layout.setVerticalSpacing(4)
+        months_layout.setColumnStretch(0, 1)
+        for c in range(1, 5):
+            months_layout.setColumnStretch(c, 2)
         self.picker_month_buttons = []
-        for i, name in enumerate(ENG_MONTHS, start=1):
+        for r in range(4):
+            q_label = QLabel(f"Q{r + 1}")
+            q_label.setObjectName("QuarterLabel")
+            q_label.setAlignment(Qt.AlignCenter)
+            months_layout.addWidget(q_label, r, 0)
+
+        for i, name in enumerate(ENG_MONTHS_SHORT, start=1):
             btn = QPushButton(name)
             btn.setProperty("month", i)
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             btn.clicked.connect(self.on_picker_month_clicked)
             self.picker_month_buttons.append(btn)
-            r = (i - 1) // 3
-            c = (i - 1) % 3
-            months_layout.addWidget(btn, r, c)
+            r = (i - 1) // 4
+            c = (i - 1) % 4
+            months_layout.addWidget(btn, r, c + 1)
 
         years_widget = QWidget(picker_stack_container)
         years_layout = QGridLayout(years_widget)
