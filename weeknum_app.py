@@ -447,8 +447,8 @@ class CalendarWindow(QWidget):
         self.month_btn.setObjectName("MonthButton")
         self.month_btn.clicked.connect(self.toggle_picker)
 
-        self.prev_btn = QPushButton("«")
-        self.next_btn = QPushButton("»")
+        self.prev_btn = QPushButton("◀")
+        self.next_btn = QPushButton("▶")
         self.prev_btn.setObjectName("NavButton")
         self.next_btn.setObjectName("NavButton")
 
@@ -494,8 +494,8 @@ class CalendarWindow(QWidget):
         picker_layout.setSpacing(8)
 
         picker_top = QHBoxLayout()
-        self.picker_prev_years_btn = QPushButton("«")
-        self.picker_next_years_btn = QPushButton("»")
+        self.picker_prev_years_btn = QPushButton("◀")
+        self.picker_next_years_btn = QPushButton("▶")
         self.picker_prev_years_btn.setObjectName("PickerNavButton")
         self.picker_next_years_btn.setObjectName("PickerNavButton")
 
