@@ -387,7 +387,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
         QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
-            padding: 8px 10px; min-height: 38px;
+            padding: 6px 8px; min-height: 34px;
             color: {text_primary};
         }}
         QPushButton[year] {{
@@ -612,15 +612,16 @@ class CalendarWindow(QWidget):
         months_layout = QGridLayout(months_widget)
         months_layout.setContentsMargins(0, 0, 0, 0)
         months_layout.setHorizontalSpacing(4)
-        months_layout.setVerticalSpacing(4)
+        months_layout.setVerticalSpacing(3)
         months_layout.setColumnStretch(0, 1)
-        for c in range(1, 5):
-            months_layout.setColumnStretch(c, 2)
+        for c in range(1, 4):
+            months_layout.setColumnStretch(c, 4)
         self.picker_month_buttons = []
         for r in range(4):
             q_label = QLabel(f"Q{r + 1}")
             q_label.setObjectName("QuarterLabel")
             q_label.setAlignment(Qt.AlignCenter)
+            q_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
             months_layout.addWidget(q_label, r, 0)
 
         for i, name in enumerate(ENG_MONTHS_SHORT, start=1):
@@ -629,8 +630,8 @@ class CalendarWindow(QWidget):
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             btn.clicked.connect(self.on_picker_month_clicked)
             self.picker_month_buttons.append(btn)
-            r = (i - 1) // 4
-            c = (i - 1) % 4
+            r = (i - 1) // 3
+            c = (i - 1) % 3
             months_layout.addWidget(btn, r, c + 1)
 
         years_widget = QWidget(picker_stack_container)
