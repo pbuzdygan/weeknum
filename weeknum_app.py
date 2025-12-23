@@ -383,12 +383,12 @@ def build_styles(theme: Theme) -> dict[str, str]:
         /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
         QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
-            padding: 10px 12px; min-height: 44px;
+            padding: 8px 10px; min-height: 38px;
             color: {text_primary};
         }}
         QPushButton[year] {{
             background: transparent; border: none; border-radius: 10px;
-            padding: 10px 12px; min-height: 44px;
+            padding: 8px 10px; min-height: 38px;
             color: {text_primary};
         }}
         QPushButton[month]:hover,
@@ -580,7 +580,7 @@ class CalendarWindow(QWidget):
         picker_view = QWidget(stack_container)
         picker_layout = QVBoxLayout(picker_view)
         picker_layout.setContentsMargins(0, 0, 0, 0)
-        picker_layout.setSpacing(8)
+        picker_layout.setSpacing(6)
 
         picker_top = QHBoxLayout()
         self.picker_prev_years_btn = QPushButton("")
@@ -605,8 +605,9 @@ class CalendarWindow(QWidget):
 
         months_widget = QWidget(picker_stack_container)
         months_layout = QGridLayout(months_widget)
-        months_layout.setHorizontalSpacing(6)
-        months_layout.setVerticalSpacing(6)
+        months_layout.setContentsMargins(0, 0, 0, 0)
+        months_layout.setHorizontalSpacing(4)
+        months_layout.setVerticalSpacing(4)
         self.picker_month_buttons = []
         for i, name in enumerate(ENG_MONTHS, start=1):
             btn = QPushButton(name)
@@ -620,8 +621,9 @@ class CalendarWindow(QWidget):
 
         years_widget = QWidget(picker_stack_container)
         years_layout = QGridLayout(years_widget)
-        years_layout.setHorizontalSpacing(6)
-        years_layout.setVerticalSpacing(6)
+        years_layout.setContentsMargins(0, 0, 0, 0)
+        years_layout.setHorizontalSpacing(4)
+        years_layout.setVerticalSpacing(4)
         self.picker_years_grid = years_layout
 
         self.picker_stack.addWidget(months_widget)
