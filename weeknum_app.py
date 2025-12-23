@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF
 from PySide6.QtGui import (
-    QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF
+    QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
 )
 from PySide6.QtWidgets import (
     QApplication, QSystemTrayIcon, QWidget, QVBoxLayout, QHBoxLayout,
@@ -241,6 +241,33 @@ def make_filled_triangle_icon(direction: str, color: QColor) -> QIcon:
     return icon
 
 
+def make_checkmark_pixmap(color: QColor, size: int = 14) -> QPixmap:
+    """
+    Crisp checkmark for menu items (avoids jagged font glyph rendering).
+    """
+    scale = 2
+    pm = QPixmap(size * scale, size * scale)
+    pm.setDevicePixelRatio(scale)
+    pm.fill(Qt.transparent)
+
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing, True)
+    pen = QPen(color)
+    pen.setWidthF(size * 0.16)
+    pen.setCapStyle(Qt.RoundCap)
+    pen.setJoinStyle(Qt.RoundJoin)
+    p.setPen(pen)
+    p.setBrush(Qt.NoBrush)
+
+    path = QPainterPath()
+    path.moveTo(size * 0.18, size * 0.55)
+    path.lineTo(size * 0.42, size * 0.74)
+    path.lineTo(size * 0.82, size * 0.26)
+    p.drawPath(path)
+    p.end()
+    return pm
+
+
 # ---------------- ISO helpers ----------------
 def iso_week(d: date) -> int:
     return d.isocalendar().week
@@ -353,6 +380,22 @@ def build_styles(theme: Theme) -> dict[str, str]:
             color: {text_primary};
         }}
 
+        /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
+        QPushButton[month] {{
+            background: transparent; border: none; border-radius: 10px;
+            padding: 10px 12px; min-height: 44px;
+            color: {text_primary};
+        }}
+        QPushButton[year] {{
+            background: transparent; border: none; border-radius: 10px;
+            padding: 10px 12px; min-height: 44px;
+            color: {text_primary};
+        }}
+        QPushButton[month]:hover,
+        QPushButton[year]:hover {{ background: {hover}; }}
+        QPushButton[month]:pressed,
+        QPushButton[year]:pressed {{ background: {press}; }}
+
         QPushButton#MonthButton:hover,
         QPushButton#NavButton:hover,
         QPushButton#TodayButton:hover,
@@ -416,9 +459,10 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         #MenuItem {{
             border-radius: 8px;
+            background-color: transparent;
         }}
         #MenuItem:hover {{
-            background: {menu_item_hover};
+            background-color: {menu_item_hover};
         }}
         #MenuText {{
             color: {text_primary};
@@ -567,6 +611,7 @@ class CalendarWindow(QWidget):
         for i, name in enumerate(ENG_MONTHS, start=1):
             btn = QPushButton(name)
             btn.setProperty("month", i)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             btn.clicked.connect(self.on_picker_month_clicked)
             self.picker_month_buttons.append(btn)
             r = (i - 1) // 3
@@ -666,8 +711,8 @@ class CalendarWindow(QWidget):
     def show_months_view(self):
         self.picker_stack.setCurrentIndex(0)
         self.content_stack.setCurrentIndex(1)
-        self.picker_prev_years_btn.setVisible(False)
-        self.picker_next_years_btn.setVisible(False)
+        self.picker_prev_years_btn.setVisible(True)
+        self.picker_next_years_btn.setVisible(True)
 
     def show_years_view(self):
         self.picker_stack.setCurrentIndex(1)
@@ -691,14 +736,30 @@ class CalendarWindow(QWidget):
             return
         self._picker_year = int(btn.property("year"))
         self.picker_year_btn.setText(str(self._picker_year))
+        self._year_page_start = self._picker_year - 4
         self.update_month_highlight()
         self.show_months_view()
 
     def prev_years_page(self):
+        # Months view: change year directly (keeps controls useful and visible).
+        if self.picker_stack.currentIndex() == 0:
+            self._picker_year -= 1
+            self.picker_year_btn.setText(str(self._picker_year))
+            self._year_page_start = self._picker_year - 4
+            self.update_month_highlight()
+            return
+
         self._year_page_start -= 9
         self.render_years()
 
     def next_years_page(self):
+        if self.picker_stack.currentIndex() == 0:
+            self._picker_year += 1
+            self.picker_year_btn.setText(str(self._picker_year))
+            self._year_page_start = self._picker_year - 4
+            self.update_month_highlight()
+            return
+
         self._year_page_start += 9
         self.render_years()
 
@@ -712,6 +773,7 @@ class CalendarWindow(QWidget):
             y = self._year_page_start + i
             btn = QPushButton(str(y))
             btn.setProperty("year", y)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             is_current = (y == self._today_year)
             btn.setProperty("currentYear", "true" if is_current else "false")
             btn.clicked.connect(self.on_picker_year_clicked)
@@ -1079,12 +1141,22 @@ class InfoDialog(QDialog):
 
 
 class MenuItem(QWidget):
-    def __init__(self, text: str, checkable: bool, checked: bool, on_click, parent=None):
+    def __init__(
+        self,
+        text: str,
+        checkable: bool,
+        checked: bool,
+        on_click,
+        check_color: QColor,
+        parent=None
+    ):
         super().__init__(parent)
         self.setObjectName("MenuItem")
         self.setAttribute(Qt.WA_Hover, True)
+        self.setCursor(QCursor(Qt.PointingHandCursor))
         self._checkable = checkable
         self._on_click = on_click
+        self._check_color = check_color
         if self._checkable:
             self.setProperty("checked", "true" if checked else "false")
 
@@ -1092,19 +1164,31 @@ class MenuItem(QWidget):
         layout.setContentsMargins(10, 6, 10, 6)
         layout.setSpacing(8)
 
-        self.check_label = QLabel("✓" if checked and checkable else "")
+        self.check_label = QLabel("")
         self.check_label.setObjectName("MenuCheck")
         self.check_label.setFixedWidth(14)
+        self.check_label.setFixedHeight(14)
+        self.check_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
         self.text_label = QLabel(text)
         self.text_label.setObjectName("MenuText")
+        self.text_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
         layout.addWidget(self.check_label)
         layout.addWidget(self.text_label, 1)
+        self.setChecked(checked)
+
+    def setCheckColor(self, color: QColor):
+        self._check_color = color
+        if self._checkable and self.property("checked") == "true":
+            self.check_label.setPixmap(make_checkmark_pixmap(self._check_color, 14))
 
     def setChecked(self, checked: bool):
         if self._checkable:
-            self.check_label.setText("✓" if checked else "")
+            if checked:
+                self.check_label.setPixmap(make_checkmark_pixmap(self._check_color, 14))
+            else:
+                self.check_label.setPixmap(QPixmap())
             self.setProperty("checked", "true" if checked else "false")
             self.style().unpolish(self)
             self.style().polish(self)
@@ -1128,6 +1212,7 @@ class FluentMenu(QWidget):
         self.setAttribute(Qt.WA_NoSystemBackground, True)
 
         self._item_to_action = {}
+        self._check_color = QColor(31, 31, 31)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -1151,6 +1236,7 @@ class FluentMenu(QWidget):
             action.isCheckable(),
             action.isChecked(),
             self._on_item_clicked,
+            check_color=self._check_color,
             parent=self.shell,
         )
         self._layout.addWidget(item)
@@ -1172,6 +1258,11 @@ class FluentMenu(QWidget):
             return
         action.trigger()
         self.hide()
+
+    def apply_theme(self, theme: Theme):
+        self._check_color = QColor(255, 255, 255) if theme.mode == "dark" else QColor(31, 31, 31)
+        for item in self._item_to_action.keys():
+            item.setCheckColor(self._check_color)
 
     def show_at(self, global_pos: QPoint):
         self.adjustSize()
@@ -1217,6 +1308,7 @@ class TrayApp:
 
         self.menu = FluentMenu()
         self.menu.setStyleSheet(self.styles["menu"])
+        self.menu.apply_theme(self.theme)
 
         self.open_action = QAction("Open calendar")
         self.open_action.triggered.connect(self.toggle_window)
@@ -1310,6 +1402,7 @@ class TrayApp:
             self.styles = build_styles(self.theme)
             self.app.setStyleSheet(self.styles["app"])
             self.menu.setStyleSheet(self.styles["menu"])
+            self.menu.apply_theme(self.theme)
             if self.win:
                 self.win.apply_theme(self.theme)
             if self.info_dialog:
