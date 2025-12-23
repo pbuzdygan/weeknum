@@ -387,7 +387,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
         QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
-            padding: 5px 8px; min-height: 32px;
+            padding: 4px 8px; min-height: 30px;
             color: {text_primary};
         }}
         QPushButton[year] {{
@@ -612,7 +612,7 @@ class CalendarWindow(QWidget):
         months_layout = QGridLayout(months_widget)
         months_layout.setContentsMargins(0, 0, 0, 0)
         months_layout.setHorizontalSpacing(4)
-        months_layout.setVerticalSpacing(2)
+        months_layout.setVerticalSpacing(1)
         months_layout.setColumnStretch(0, 1)
         for c in range(1, 4):
             months_layout.setColumnStretch(c, 4)
@@ -1358,12 +1358,12 @@ class TrayApp:
         else:
             self.autostart_action.setEnabled(False)
 
+        self.menu.add_action(self.info_action)
+        self.menu.add_action(self.open_action)
+        self.menu.add_separator()
+        self.menu.add_action(self.autostart_action)
         self.menu.add_action(self.toggle_badge_action)
         self.menu.add_action(self.pin_action)
-        self.menu.add_action(self.autostart_action)
-        self.menu.add_separator()
-        self.menu.add_action(self.open_action)
-        self.menu.add_action(self.info_action)
         self.menu.add_separator()
         self.menu.add_action(self.quit_action)
 
