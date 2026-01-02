@@ -1,12 +1,15 @@
+import json
+import re
 import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF
+from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF, QUrl
 from PySide6.QtGui import (
-    QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
+    QDesktopServices, QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
 )
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QApplication, QSystemTrayIcon, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QGridLayout, QFrame, QDialog, QStyle, QStackedLayout,
@@ -16,6 +19,16 @@ from PySide6.QtWidgets import (
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
 APP_VERSION = "1.3.0"
+
+UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
+UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"
+
+
+def parse_semver(v: str) -> tuple[int, int, int] | None:
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", v or "")
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -1416,6 +1429,95 @@ class TrayApp:
         self.theme_timer.start()
 
         self.tray.show()
+
+        # Update check: run once per launch, async, no retries on failure.
+        self._update_checked = False
+        self._update_message_pending = False
+        self._update_url = UPDATE_LATEST_URL
+        self._nam = QNetworkAccessManager(self.app)
+        self._update_reply: QNetworkReply | None = None
+        self._update_timeout: QTimer | None = None
+        self.tray.messageClicked.connect(self._on_tray_message_clicked)
+        QTimer.singleShot(1500, self.check_updates_on_startup)
+
+    def _on_tray_message_clicked(self):
+        if self._update_message_pending and self._update_url:
+            QDesktopServices.openUrl(QUrl(self._update_url))
+
+    def check_updates_on_startup(self):
+        if self._update_checked:
+            return
+        self._update_checked = True
+
+        req = QNetworkRequest(QUrl(UPDATE_API_URL))
+        req.setRawHeader(b"User-Agent", b"WeekNumApp")
+        req.setRawHeader(b"Accept", b"application/vnd.github+json")
+        req.setRawHeader(b"X-GitHub-Api-Version", b"2022-11-28")
+
+        reply = self._nam.get(req)
+        self._update_reply = reply
+        reply.finished.connect(self._on_update_reply_finished)
+
+        timeout = QTimer(self.app)
+        timeout.setSingleShot(True)
+        timeout.timeout.connect(lambda r=reply: self._abort_update_reply(r))
+        timeout.start(5000)
+        self._update_timeout = timeout
+
+    def _abort_update_reply(self, reply: QNetworkReply):
+        try:
+            if reply and reply.isRunning():
+                reply.abort()
+        except Exception:
+            pass
+
+    def _on_update_reply_finished(self):
+        reply = self._update_reply
+        self._update_reply = None
+        if self._update_timeout:
+            self._update_timeout.stop()
+            self._update_timeout = None
+
+        if reply is None:
+            return
+
+        try:
+            if reply.error() != QNetworkReply.NetworkError.NoError:
+                return
+            raw = bytes(reply.readAll()).decode("utf-8", errors="replace")
+        except Exception:
+            return
+        finally:
+            reply.deleteLater()
+
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            return
+
+        tag = payload.get("tag_name") if isinstance(payload, dict) else None
+        if not isinstance(tag, str) or not tag.strip():
+            return
+
+        remote = parse_semver(tag)
+        local = parse_semver(APP_VERSION)
+        if remote is None or local is None:
+            return
+
+        if remote <= local:
+            return
+
+        self._update_message_pending = True
+        QTimer.singleShot(5500, self._clear_update_message_pending)
+        self.tray.showMessage(
+            "WeekNum",
+            f"New version available: {tag} (you have {APP_VERSION}). Click to download.",
+            QSystemTrayIcon.Information,
+            5000,
+        )
+
+    def _clear_update_message_pending(self):
+        self._update_message_pending = False
 
     def ensure_window(self):
         if self.win is None:
