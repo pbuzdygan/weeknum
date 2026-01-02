@@ -166,7 +166,7 @@ def make_week_icon(
         p.setRenderHint(QPainter.Antialiasing, True)
         p.setRenderHint(QPainter.TextAntialiasing, True)
 
-        pad = 1
+        pad = 0
         rect = QRect(pad, pad, size - pad * 2, size - pad * 2)
 
         # Fit text dynamically into the available area
@@ -186,8 +186,13 @@ def make_week_icon(
             text_rect = fm.tightBoundingRect(txt)
 
         # Plain text, no outline
+        # Note: AlignCenter can ignore negative glyph bearings at small sizes, causing edge clipping.
+        # Center using the actual tight bounding rect instead.
         p.setPen(text_color if text_color is not None else QColor(0, 0, 0))
-        p.drawText(target, Qt.AlignCenter, txt)
+        target_center = QPointF(target.center())
+        text_center = QPointF(text_rect.center())
+        pos = QPointF(target_center.x() - text_center.x(), target_center.y() - text_center.y())
+        p.drawText(pos, txt)
 
         p.end()
         return pm
