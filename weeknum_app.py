@@ -314,36 +314,47 @@ def build_styles(theme: Theme) -> dict[str, str]:
     """
     accent = theme.accent
     accent_rgb = f"{accent.red()},{accent.green()},{accent.blue()}"
+    accent_tuple = (accent.red(), accent.green(), accent.blue())
+
+    def blend(bg: tuple[int, int, int], fg: tuple[int, int, int], t: float) -> str:
+        r = round(bg[0] * (1 - t) + fg[0] * t)
+        g = round(bg[1] * (1 - t) + fg[1] * t)
+        b = round(bg[2] * (1 - t) + fg[2] * t)
+        return f"rgb({r},{g},{b})"
 
     if theme.mode == "dark":
+        shell_bg_rgb = (32, 32, 32)
         shell_bg = "rgb(32,32,32)"
         border = "rgba(255,255,255,0.10)"
         text_primary = "#ffffff"
         text_secondary = "#ffffff"
         dim_text = "rgba(255,255,255,0.72)"
-        hover = f"rgba({accent_rgb},0.18)"
-        week_bg = f"rgba({accent_rgb},0.14)"
-        press = f"rgba({accent_rgb},0.26)"
-        today_bg = f"rgba({accent_rgb},0.28)"
-        today_text = "#ffffff"
+        hover = blend(shell_bg_rgb, accent_tuple, 0.22)
+        press = blend(shell_bg_rgb, accent_tuple, 0.32)
+        today_bg = f"rgb({accent_rgb})"
+        today_text_qc = text_color_for_bg(accent)
+        today_text = f"rgb({today_text_qc.red()},{today_text_qc.green()},{today_text_qc.blue()})"
+        cell_hover = blend(shell_bg_rgb, accent_tuple, 0.30)
         menu_bg = "#202020"
         menu_border = "rgba(255,255,255,0.14)"
-        menu_item_hover = f"rgba({accent_rgb},0.20)"
+        menu_item_hover = blend((32, 32, 32), accent_tuple, 0.26)
         sep = "rgba(255,255,255,0.10)"
     else:
+        shell_bg_rgb = (255, 255, 255)
         shell_bg = "rgb(255,255,255)"
         border = "rgba(0,0,0,0.08)"
         text_primary = "#1f1f1f"
         text_secondary = "#666666"
         dim_text = "rgba(0,0,0,0.40)"
-        hover = f"rgba({accent_rgb},0.08)"
-        week_bg = f"rgba({accent_rgb},0.07)"
-        press = f"rgba({accent_rgb},0.14)"
-        today_bg = f"rgba({accent_rgb},0.15)"
-        today_text = f"rgb({accent_rgb})"
+        hover = blend(shell_bg_rgb, accent_tuple, 0.10)
+        press = blend(shell_bg_rgb, accent_tuple, 0.16)
+        today_bg = f"rgb({accent_rgb})"
+        today_text_qc = text_color_for_bg(accent)
+        today_text = f"rgb({today_text_qc.red()},{today_text_qc.green()},{today_text_qc.blue()})"
+        cell_hover = blend(shell_bg_rgb, accent_tuple, 0.18)
         menu_bg = "#f8f8f8"
         menu_border = "#d0d0d0"
-        menu_item_hover = "#e8f2ff"
+        menu_item_hover = blend((248, 248, 248), accent_tuple, 0.10)
         sep = "#e0e0e0"
 
     calendar_qss = f"""
@@ -400,14 +411,12 @@ def build_styles(theme: Theme) -> dict[str, str]:
             background: transparent; border: none; border-radius: 10px;
             padding: 4px 8px; min-height: 30px;
             font-size: {FONT_PICKER_PX}px;
-            font-weight: 600;
             color: {text_primary};
         }}
         #CalendarShell QPushButton[year] {{
             background: transparent; border: none; border-radius: 10px;
             padding: 8px 10px; min-height: 38px;
             font-size: {FONT_PICKER_PX}px;
-            font-weight: 600;
             color: {text_primary};
         }}
         #CalendarShell QPushButton[month]:hover,
@@ -433,16 +442,15 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QLabel#DowLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 400; }}
         QLabel#QuarterLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 600; }}
         QFrame[cellRole="day"] {{ background: transparent; border-radius: 8px; }}
-        QFrame[cellRole="day"][weekCurrent="true"] {{ background: {week_bg}; }}
-        QFrame[cellRole="day"]:hover {{ background: {hover}; }}
+        QFrame[cellRole="day"]:hover {{ background: {cell_hover}; }}
         QFrame[cellRole="day"][state="today"] {{ background: {today_bg}; }}
+        QFrame[cellRole="day"][state="today"]:hover {{ background: {today_bg}; }}
 
         QLabel#DayLabel {{ font-size: {FONT_DAY_PX}px; font-weight: 400; color: {text_primary}; }}
         QLabel#DayLabel[today="true"] {{ color: {today_text}; font-weight: 600; }}
         QLabel#DayLabel[dim="true"] {{ color: {dim_text}; }}
 
         QFrame[cellRole="week"] {{ background: transparent; border-radius: 6px; }}
-        QFrame[cellRole="week"][weekCurrent="true"] {{ background: {week_bg}; }}
         QLabel#WeekLabel {{ font-size: {FONT_LABEL_PX}px; font-weight: 400; color: {text_secondary}; }}
     """
 
