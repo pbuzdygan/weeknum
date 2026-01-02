@@ -71,7 +71,7 @@ FONT_DAY_PX = 15       # Calendar days: 13px Regular
 FONT_LABEL_PX = 13     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
-FONT_PICKER_PX = 20    # Month/Year picker buttons text
+FONT_PICKER_PX = 18    # Month/Year picker buttons text
 
 
 # ---------------- Windows theme (light/dark) + accent color ----------------
@@ -396,24 +396,24 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
 
         /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
-        QPushButton[month] {{
+        #CalendarShell QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
             padding: 4px 8px; min-height: 30px;
             font-size: {FONT_PICKER_PX}px;
             font-weight: 600;
             color: {text_primary};
         }}
-        QPushButton[year] {{
+        #CalendarShell QPushButton[year] {{
             background: transparent; border: none; border-radius: 10px;
             padding: 8px 10px; min-height: 38px;
             font-size: {FONT_PICKER_PX}px;
             font-weight: 600;
             color: {text_primary};
         }}
-        QPushButton[month]:hover,
-        QPushButton[year]:hover {{ background: {hover}; }}
-        QPushButton[month]:pressed,
-        QPushButton[year]:pressed {{ background: {press}; }}
+        #CalendarShell QPushButton[month]:hover,
+        #CalendarShell QPushButton[year]:hover {{ background: {hover}; }}
+        #CalendarShell QPushButton[month]:pressed,
+        #CalendarShell QPushButton[year]:pressed {{ background: {press}; }}
 
         QPushButton#MonthButton:hover,
         QPushButton#NavButton:hover,
