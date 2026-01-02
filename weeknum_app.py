@@ -1121,7 +1121,7 @@ class InfoDialog(QDialog):
         author = QLabel("Author: Przemyslaw Buzdygan")
 
         github = QLabel(
-            'GitHub: <a href="https://www.github.com/pbuzdygan">https://www.github.com/pbuzdygan</a>'
+            'GitHub: <a href="https://pbuzdygan.github.io">https://pbuzdygan.github.io</a>'
         )
         github.setTextFormat(Qt.TextFormat.RichText)
         github.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
