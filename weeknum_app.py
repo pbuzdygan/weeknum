@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.9"
 
 UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
 UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"
@@ -477,6 +477,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         QLabel#InfoTitle {{ font-size: {FONT_HEADLINE_PX}px; font-weight: 600; color: {text_primary}; }}
         QLabel {{ font-size: {FONT_BODY_PX}px; font-weight: 400; color: {text_secondary}; }}
+        QLabel#UpdateStatus {{ font-weight: 600; }}
         QPushButton {{
             background: transparent; border: none; border-radius: 8px;
             padding: 6px 10px; font-size: {FONT_BODY_PX}px; font-weight: 400;
@@ -1103,6 +1104,8 @@ class InfoDialog(QDialog):
     def __init__(self, theme: Theme, parent=None):
         super().__init__(parent)
         self._theme = theme
+        self._update_status = "unknown"
+        self._update_tag = None
 
         self.setWindowTitle("Info")
         # Transparent outer window so rounded shell corners don't show a square backdrop
@@ -1154,6 +1157,15 @@ class InfoDialog(QDialog):
         github.setOpenExternalLinks(True)
 
         version = QLabel(f"Version: {APP_VERSION}")
+        self.update_icon = QLabel("")
+        self.update_icon.setFixedSize(14, 14)
+        self.update_icon.setScaledContents(True)
+
+        self.update_status = QLabel("")
+        self.update_status.setTextFormat(Qt.TextFormat.RichText)
+        self.update_status.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        self.update_status.setOpenExternalLinks(True)
+        self.update_status.setObjectName("UpdateStatus")
 
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
@@ -1173,6 +1185,12 @@ class InfoDialog(QDialog):
         text_col.addWidget(author, 0, Qt.AlignHCenter)
         text_col.addWidget(github, 0, Qt.AlignHCenter)
         text_col.addWidget(version, 0, Qt.AlignHCenter)
+        status_row = QHBoxLayout()
+        status_row.setSpacing(6)
+        status_row.addWidget(self.update_icon, 0, Qt.AlignVCenter)
+        status_row.addWidget(self.update_status, 0, Qt.AlignVCenter)
+        status_row.setAlignment(Qt.AlignHCenter)
+        text_col.addLayout(status_row)
         text_col.addStretch(1)
 
         shell_layout.addSpacing(6)
@@ -1186,6 +1204,48 @@ class InfoDialog(QDialog):
     def apply_theme(self, theme: Theme):
         self._theme = theme
         self.setStyleSheet(build_styles(theme)["info"])
+        self._render_update_status()
+
+    def set_update_status(self, status: str, tag: str | None):
+        self._update_status = status
+        self._update_tag = tag
+        self._render_update_status()
+
+    def _render_update_status(self):
+        def make_status_icon(color: QColor, kind: str) -> QPixmap:
+            size = 14
+            pm = QPixmap(size, size)
+            pm.fill(Qt.transparent)
+            p = QPainter(pm)
+            p.setRenderHint(QPainter.Antialiasing, True)
+            p.setPen(QPen(color, 2))
+            if kind == "check":
+                path = QPainterPath()
+                path.moveTo(size * 0.2, size * 0.55)
+                path.lineTo(size * 0.45, size * 0.78)
+                path.lineTo(size * 0.82, size * 0.28)
+                p.drawPath(path)
+            elif kind == "arrow":
+                path = QPainterPath()
+                path.moveTo(size * 0.5, size * 0.2)
+                path.lineTo(size * 0.5, size * 0.85)
+                path.moveTo(size * 0.3, size * 0.38)
+                path.lineTo(size * 0.5, size * 0.2)
+                path.lineTo(size * 0.7, size * 0.38)
+                p.drawPath(path)
+            p.end()
+            return pm
+
+        if self._update_status == "update_available" and self._update_tag:
+            label = (
+                f'New version available: {self._update_tag} '
+                f'(<a href="{UPDATE_LATEST_URL}">Download</a>)'
+            )
+            self.update_icon.setPixmap(make_status_icon(QColor(255, 149, 0), "arrow"))
+        else:
+            label = "Up to date"
+            self.update_icon.setPixmap(make_status_icon(QColor(46, 160, 67), "check"))
+        self.update_status.setText(label)
 
     def changeEvent(self, event):
         if event.type() == QEvent.WindowDeactivate:
@@ -1434,6 +1494,8 @@ class TrayApp:
         self._update_checked = False
         self._update_message_pending = False
         self._update_url = UPDATE_LATEST_URL
+        self._update_status = "unknown"
+        self._update_tag = None
         self._nam = QNetworkAccessManager(self.app)
         self._update_reply: QNetworkReply | None = None
         self._update_timeout: QTimer | None = None
@@ -1478,6 +1540,8 @@ class TrayApp:
             self._update_timeout.stop()
             self._update_timeout = None
 
+        self._update_status = "up_to_date"
+
         if reply is None:
             return
 
@@ -1502,17 +1566,21 @@ class TrayApp:
         remote = parse_semver(tag)
         local = parse_semver(APP_VERSION)
         if remote is None or local is None:
+            self._update_status = "up_to_date"
             return
 
         if remote <= local:
+            self._update_status = "up_to_date"
             return
 
+        self._update_status = "update_available"
+        self._update_tag = tag
         self._update_message_pending = True
         QTimer.singleShot(5500, self._clear_update_message_pending)
         self.tray.showMessage(
             "WeekNum",
-            f"New version available: {tag} (you have {APP_VERSION}). Click to download.",
-            QSystemTrayIcon.Information,
+            f"New version available: {tag}. Click to download.",
+            QSystemTrayIcon.NoIcon,
             5000,
         )
 
@@ -1558,6 +1626,7 @@ class TrayApp:
             self.info_dialog = InfoDialog(self.theme)
         else:
             self.info_dialog.apply_theme(self.theme)
+        self.info_dialog.set_update_status(self._update_status, self._update_tag)
         self.info_dialog.show()
         self.info_dialog.raise_()
         self.info_dialog.activateWindow()
