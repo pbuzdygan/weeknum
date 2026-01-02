@@ -67,8 +67,8 @@ def set_windows_autostart_enabled(enabled: bool) -> bool:
 FONT_FAMILY = "Segoe UI"
 FONT_HEADLINE_PX = 24  # Headline / Clock: 24px SemiBold
 FONT_BODY_PX = 12      # Body / Date: 12px Regular
-FONT_DAY_PX = 13       # Calendar days: 13px Regular
-FONT_LABEL_PX = 11     # Labels: 11px Regular
+FONT_DAY_PX = 15       # Calendar days: 13px Regular
+FONT_LABEL_PX = 11     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
 
@@ -379,7 +379,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         QPushButton#TodayButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 6px 10px; font-size: {FONT_BODY_PX}px; font-weight: 400; min-height: 38px;
+            padding: 6px 10px; font-size: {FONT_NAV_PX}px; font-weight: 400; min-height: 38px;
             color: {text_primary};
         }}
         QPushButton#PickerYearButton {{
