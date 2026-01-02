@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.2.2
+
 ## 1.2.1
 
 - Minor UI correction in month picker view, changing order in main menu

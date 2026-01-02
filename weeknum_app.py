@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -166,7 +166,7 @@ def make_week_icon(
         p.setRenderHint(QPainter.Antialiasing, True)
         p.setRenderHint(QPainter.TextAntialiasing, True)
 
-        pad = 0
+        pad = 1
         rect = QRect(pad, pad, size - pad * 2, size - pad * 2)
 
         # Fit text dynamically into the available area
