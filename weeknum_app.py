@@ -68,7 +68,7 @@ FONT_FAMILY = "Segoe UI"
 FONT_HEADLINE_PX = 24  # Headline / Clock: 24px SemiBold
 FONT_BODY_PX = 12      # Body / Date: 12px Regular
 FONT_DAY_PX = 15       # Calendar days: 13px Regular
-FONT_LABEL_PX = 11     # Week days + WXX + Q Labels: 11px Regular
+FONT_LABEL_PX = 13     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
 
