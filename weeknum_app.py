@@ -398,6 +398,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
             padding: 4px 8px; min-height: 30px;
+            font-size: {FONT_BODY_PX + 3}px;
             color: {text_primary};
         }}
         QPushButton[year] {{
@@ -525,7 +526,7 @@ class CalendarWindow(QWidget):
         self._year_page_start = self._today_year - 4
 
         self.setWindowTitle("Calendar - week numbers")
-        self.setFixedSize(420, 340)
+        self.setFixedSize(380, 340)
         self.setObjectName("calendarWindow")
         # Transparent outer window so rounded shell corners don't show a square backdrop
         self.setAttribute(Qt.WA_TranslucentBackground, True)
