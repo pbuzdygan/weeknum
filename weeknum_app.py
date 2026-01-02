@@ -71,7 +71,7 @@ FONT_DAY_PX = 15       # Calendar days: 13px Regular
 FONT_LABEL_PX = 13     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
-FONT_PICKER_PX = 16    # Month/Year picker buttons text
+FONT_PICKER_PX = 20    # Month/Year picker buttons text
 
 
 # ---------------- Windows theme (light/dark) + accent color ----------------
