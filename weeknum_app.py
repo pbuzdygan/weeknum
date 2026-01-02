@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.2.9"
+APP_VERSION = "1.3.0"
 
 UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
 UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"

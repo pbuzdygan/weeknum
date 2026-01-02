@@ -23,15 +23,12 @@ It also includes an optional floating widget on the desktop.
 
 - tray icon with the week number (digits only)
 - tray tooltip with the week number
-- tray context menu (right-click)
-- Info dialog with banner, clickable links, author and version
 - compact calendar shown above the taskbar
 - month/year picker inside the same window (no separate dialog)
-- Today button
-- Pin window option (always on top)
-- optional floating widget that can be shown/hidden
-- floating, dragable widget
+- **Always on top** option
+- optional floating and dragable widget that can be shown/hidden
 - **WeekNum Autostart** can be enabled/disabled from menu
+- **Automatic update check** - WeekNum App will notifiy You that there is a new app release
 
 ---
 ## Demo / Screenshots
