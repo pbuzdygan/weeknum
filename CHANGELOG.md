@@ -2,10 +2,13 @@
 
 ## 1.3.0
 
+New feature:
+- Added an automatic update check (tray notification) on startup that informs users when a newer release is available, with a clear update status in the Info dialog (including a direct download link).
+
 Minor UI changes
 - improving light\dark mode
 - improving spacing in entire UI
-- fixing issues with presenting wide week numbers in tray
+- fixing issues with tray week-number rendering
 
 ## 1.2.1
 

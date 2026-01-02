@@ -1,12 +1,15 @@
+import json
+import re
 import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF
+from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF, QUrl
 from PySide6.QtGui import (
-    QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
+    QDesktopServices, QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
 )
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QApplication, QSystemTrayIcon, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QGridLayout, QFrame, QDialog, QStyle, QStackedLayout,
@@ -16,6 +19,16 @@ from PySide6.QtWidgets import (
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
 APP_VERSION = "1.3.0"
+
+UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
+UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"
+
+
+def parse_semver(v: str) -> tuple[int, int, int] | None:
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", v or "")
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -464,6 +477,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         QLabel#InfoTitle {{ font-size: {FONT_HEADLINE_PX}px; font-weight: 600; color: {text_primary}; }}
         QLabel {{ font-size: {FONT_BODY_PX}px; font-weight: 400; color: {text_secondary}; }}
+        QLabel#UpdateStatus {{ font-weight: 600; }}
         QPushButton {{
             background: transparent; border: none; border-radius: 8px;
             padding: 6px 10px; font-size: {FONT_BODY_PX}px; font-weight: 400;
@@ -1090,6 +1104,8 @@ class InfoDialog(QDialog):
     def __init__(self, theme: Theme, parent=None):
         super().__init__(parent)
         self._theme = theme
+        self._update_status = "unknown"
+        self._update_tag = None
 
         self.setWindowTitle("Info")
         # Transparent outer window so rounded shell corners don't show a square backdrop
@@ -1141,6 +1157,15 @@ class InfoDialog(QDialog):
         github.setOpenExternalLinks(True)
 
         version = QLabel(f"Version: {APP_VERSION}")
+        self.update_icon = QLabel("")
+        self.update_icon.setFixedSize(14, 14)
+        self.update_icon.setScaledContents(True)
+
+        self.update_status = QLabel("")
+        self.update_status.setTextFormat(Qt.TextFormat.RichText)
+        self.update_status.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        self.update_status.setOpenExternalLinks(True)
+        self.update_status.setObjectName("UpdateStatus")
 
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
@@ -1160,6 +1185,12 @@ class InfoDialog(QDialog):
         text_col.addWidget(author, 0, Qt.AlignHCenter)
         text_col.addWidget(github, 0, Qt.AlignHCenter)
         text_col.addWidget(version, 0, Qt.AlignHCenter)
+        status_row = QHBoxLayout()
+        status_row.setSpacing(6)
+        status_row.addWidget(self.update_icon, 0, Qt.AlignVCenter)
+        status_row.addWidget(self.update_status, 0, Qt.AlignVCenter)
+        status_row.setAlignment(Qt.AlignHCenter)
+        text_col.addLayout(status_row)
         text_col.addStretch(1)
 
         shell_layout.addSpacing(6)
@@ -1173,6 +1204,48 @@ class InfoDialog(QDialog):
     def apply_theme(self, theme: Theme):
         self._theme = theme
         self.setStyleSheet(build_styles(theme)["info"])
+        self._render_update_status()
+
+    def set_update_status(self, status: str, tag: str | None):
+        self._update_status = status
+        self._update_tag = tag
+        self._render_update_status()
+
+    def _render_update_status(self):
+        def make_status_icon(color: QColor, kind: str) -> QPixmap:
+            size = 14
+            pm = QPixmap(size, size)
+            pm.fill(Qt.transparent)
+            p = QPainter(pm)
+            p.setRenderHint(QPainter.Antialiasing, True)
+            p.setPen(QPen(color, 2))
+            if kind == "check":
+                path = QPainterPath()
+                path.moveTo(size * 0.2, size * 0.55)
+                path.lineTo(size * 0.45, size * 0.78)
+                path.lineTo(size * 0.82, size * 0.28)
+                p.drawPath(path)
+            elif kind == "arrow":
+                path = QPainterPath()
+                path.moveTo(size * 0.5, size * 0.2)
+                path.lineTo(size * 0.5, size * 0.85)
+                path.moveTo(size * 0.3, size * 0.38)
+                path.lineTo(size * 0.5, size * 0.2)
+                path.lineTo(size * 0.7, size * 0.38)
+                p.drawPath(path)
+            p.end()
+            return pm
+
+        if self._update_status == "update_available" and self._update_tag:
+            label = (
+                f'New version available: {self._update_tag} '
+                f'(<a href="{UPDATE_LATEST_URL}">Download</a>)'
+            )
+            self.update_icon.setPixmap(make_status_icon(QColor(255, 149, 0), "arrow"))
+        else:
+            label = "Up to date"
+            self.update_icon.setPixmap(make_status_icon(QColor(46, 160, 67), "check"))
+        self.update_status.setText(label)
 
     def changeEvent(self, event):
         if event.type() == QEvent.WindowDeactivate:
@@ -1417,6 +1490,103 @@ class TrayApp:
 
         self.tray.show()
 
+        # Update check: run once per launch, async, no retries on failure.
+        self._update_checked = False
+        self._update_message_pending = False
+        self._update_url = UPDATE_LATEST_URL
+        self._update_status = "unknown"
+        self._update_tag = None
+        self._nam = QNetworkAccessManager(self.app)
+        self._update_reply: QNetworkReply | None = None
+        self._update_timeout: QTimer | None = None
+        self.tray.messageClicked.connect(self._on_tray_message_clicked)
+        QTimer.singleShot(1500, self.check_updates_on_startup)
+
+    def _on_tray_message_clicked(self):
+        if self._update_message_pending and self._update_url:
+            QDesktopServices.openUrl(QUrl(self._update_url))
+
+    def check_updates_on_startup(self):
+        if self._update_checked:
+            return
+        self._update_checked = True
+
+        req = QNetworkRequest(QUrl(UPDATE_API_URL))
+        req.setRawHeader(b"User-Agent", b"WeekNumApp")
+        req.setRawHeader(b"Accept", b"application/vnd.github+json")
+        req.setRawHeader(b"X-GitHub-Api-Version", b"2022-11-28")
+
+        reply = self._nam.get(req)
+        self._update_reply = reply
+        reply.finished.connect(self._on_update_reply_finished)
+
+        timeout = QTimer(self.app)
+        timeout.setSingleShot(True)
+        timeout.timeout.connect(lambda r=reply: self._abort_update_reply(r))
+        timeout.start(5000)
+        self._update_timeout = timeout
+
+    def _abort_update_reply(self, reply: QNetworkReply):
+        try:
+            if reply and reply.isRunning():
+                reply.abort()
+        except Exception:
+            pass
+
+    def _on_update_reply_finished(self):
+        reply = self._update_reply
+        self._update_reply = None
+        if self._update_timeout:
+            self._update_timeout.stop()
+            self._update_timeout = None
+
+        self._update_status = "up_to_date"
+
+        if reply is None:
+            return
+
+        try:
+            if reply.error() != QNetworkReply.NetworkError.NoError:
+                return
+            raw = bytes(reply.readAll()).decode("utf-8", errors="replace")
+        except Exception:
+            return
+        finally:
+            reply.deleteLater()
+
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            return
+
+        tag = payload.get("tag_name") if isinstance(payload, dict) else None
+        if not isinstance(tag, str) or not tag.strip():
+            return
+
+        remote = parse_semver(tag)
+        local = parse_semver(APP_VERSION)
+        if remote is None or local is None:
+            self._update_status = "up_to_date"
+            return
+
+        if remote <= local:
+            self._update_status = "up_to_date"
+            return
+
+        self._update_status = "update_available"
+        self._update_tag = tag
+        self._update_message_pending = True
+        QTimer.singleShot(5500, self._clear_update_message_pending)
+        self.tray.showMessage(
+            "WeekNum",
+            f"New version available: {tag}. Click to download.",
+            QSystemTrayIcon.NoIcon,
+            5000,
+        )
+
+    def _clear_update_message_pending(self):
+        self._update_message_pending = False
+
     def ensure_window(self):
         if self.win is None:
             self.win = CalendarWindow(self.state, self.theme)
@@ -1456,6 +1626,7 @@ class TrayApp:
             self.info_dialog = InfoDialog(self.theme)
         else:
             self.info_dialog.apply_theme(self.theme)
+        self.info_dialog.set_update_status(self._update_status, self._update_tag)
         self.info_dialog.show()
         self.info_dialog.raise_()
         self.info_dialog.activateWindow()
