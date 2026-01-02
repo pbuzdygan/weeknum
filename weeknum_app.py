@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.3.0"
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -67,10 +67,11 @@ def set_windows_autostart_enabled(enabled: bool) -> bool:
 FONT_FAMILY = "Segoe UI"
 FONT_HEADLINE_PX = 24  # Headline / Clock: 24px SemiBold
 FONT_BODY_PX = 12      # Body / Date: 12px Regular
-FONT_DAY_PX = 13       # Calendar days: 13px Regular
-FONT_LABEL_PX = 11     # Labels: 11px Regular
+FONT_DAY_PX = 15       # Calendar days: 13px Regular
+FONT_LABEL_PX = 13     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
+FONT_PICKER_PX = 18    # Month/Year picker buttons text
 
 
 # ---------------- Windows theme (light/dark) + accent color ----------------
@@ -186,8 +187,18 @@ def make_week_icon(
             text_rect = fm.tightBoundingRect(txt)
 
         # Plain text, no outline
+        # Note: AlignCenter can ignore negative glyph bearings at small sizes, causing edge clipping.
+        # Center horizontally using the tight bounds (prevents "0" left clipping),
+        # but center vertically using the looser bounds (looks more visually centered).
         p.setPen(text_color if text_color is not None else QColor(0, 0, 0))
-        p.drawText(target, Qt.AlignCenter, txt)
+        tight = text_rect
+        loose = fm.boundingRect(txt)
+        target_center = QPointF(target.center())
+        pos = QPointF(
+            target_center.x() - QPointF(tight.center()).x(),
+            target_center.y() - QPointF(loose.center()).y(),
+        )
+        p.drawText(pos, txt)
 
         p.end()
         return pm
@@ -303,36 +314,47 @@ def build_styles(theme: Theme) -> dict[str, str]:
     """
     accent = theme.accent
     accent_rgb = f"{accent.red()},{accent.green()},{accent.blue()}"
+    accent_tuple = (accent.red(), accent.green(), accent.blue())
+
+    def blend(bg: tuple[int, int, int], fg: tuple[int, int, int], t: float) -> str:
+        r = round(bg[0] * (1 - t) + fg[0] * t)
+        g = round(bg[1] * (1 - t) + fg[1] * t)
+        b = round(bg[2] * (1 - t) + fg[2] * t)
+        return f"rgb({r},{g},{b})"
 
     if theme.mode == "dark":
+        shell_bg_rgb = (32, 32, 32)
         shell_bg = "rgb(32,32,32)"
         border = "rgba(255,255,255,0.10)"
         text_primary = "#ffffff"
         text_secondary = "#ffffff"
         dim_text = "rgba(255,255,255,0.72)"
-        hover = f"rgba({accent_rgb},0.18)"
-        week_bg = f"rgba({accent_rgb},0.14)"
-        press = f"rgba({accent_rgb},0.26)"
-        today_bg = f"rgba({accent_rgb},0.28)"
-        today_text = "#ffffff"
+        hover = blend(shell_bg_rgb, accent_tuple, 0.22)
+        press = blend(shell_bg_rgb, accent_tuple, 0.32)
+        today_bg = f"rgb({accent_rgb})"
+        today_text_qc = text_color_for_bg(accent)
+        today_text = f"rgb({today_text_qc.red()},{today_text_qc.green()},{today_text_qc.blue()})"
+        cell_hover = blend(shell_bg_rgb, accent_tuple, 0.30)
         menu_bg = "#202020"
         menu_border = "rgba(255,255,255,0.14)"
-        menu_item_hover = f"rgba({accent_rgb},0.20)"
+        menu_item_hover = blend((32, 32, 32), accent_tuple, 0.26)
         sep = "rgba(255,255,255,0.10)"
     else:
+        shell_bg_rgb = (255, 255, 255)
         shell_bg = "rgb(255,255,255)"
         border = "rgba(0,0,0,0.08)"
         text_primary = "#1f1f1f"
         text_secondary = "#666666"
         dim_text = "rgba(0,0,0,0.40)"
-        hover = f"rgba({accent_rgb},0.08)"
-        week_bg = f"rgba({accent_rgb},0.07)"
-        press = f"rgba({accent_rgb},0.14)"
-        today_bg = f"rgba({accent_rgb},0.15)"
-        today_text = f"rgb({accent_rgb})"
+        hover = blend(shell_bg_rgb, accent_tuple, 0.10)
+        press = blend(shell_bg_rgb, accent_tuple, 0.16)
+        today_bg = f"rgb({accent_rgb})"
+        today_text_qc = text_color_for_bg(accent)
+        today_text = f"rgb({today_text_qc.red()},{today_text_qc.green()},{today_text_qc.blue()})"
+        cell_hover = blend(shell_bg_rgb, accent_tuple, 0.18)
         menu_bg = "#f8f8f8"
         menu_border = "#d0d0d0"
-        menu_item_hover = "#e8f2ff"
+        menu_item_hover = blend((248, 248, 248), accent_tuple, 0.10)
         sep = "#e0e0e0"
 
     calendar_qss = f"""
@@ -363,13 +385,13 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         QPushButton#NavButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 6px 10px; font-size: {FONT_NAV_PX}px; min-width: 34px; min-height: 38px;
+            padding: 6px 6px; font-size: {FONT_NAV_PX}px; min-width: 26px; min-height: 38px;
             text-align: center;
             color: {text_primary};
         }}
         QPushButton#TodayButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 6px 10px; font-size: {FONT_BODY_PX}px; font-weight: 400; min-height: 38px;
+            padding: 6px 10px; font-size: {FONT_NAV_PX}px; font-weight: 400; min-height: 38px;
             color: {text_primary};
         }}
         QPushButton#PickerYearButton {{
@@ -385,20 +407,22 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
 
         /* Month/Year picker grid buttons (bigger hit-area, no default borders) */
-        QPushButton[month] {{
+        #CalendarShell QPushButton[month] {{
             background: transparent; border: none; border-radius: 10px;
             padding: 4px 8px; min-height: 30px;
+            font-size: {FONT_PICKER_PX}px;
             color: {text_primary};
         }}
-        QPushButton[year] {{
+        #CalendarShell QPushButton[year] {{
             background: transparent; border: none; border-radius: 10px;
             padding: 8px 10px; min-height: 38px;
+            font-size: {FONT_PICKER_PX}px;
             color: {text_primary};
         }}
-        QPushButton[month]:hover,
-        QPushButton[year]:hover {{ background: {hover}; }}
-        QPushButton[month]:pressed,
-        QPushButton[year]:pressed {{ background: {press}; }}
+        #CalendarShell QPushButton[month]:hover,
+        #CalendarShell QPushButton[year]:hover {{ background: {hover}; }}
+        #CalendarShell QPushButton[month]:pressed,
+        #CalendarShell QPushButton[year]:pressed {{ background: {press}; }}
 
         QPushButton#MonthButton:hover,
         QPushButton#NavButton:hover,
@@ -418,16 +442,15 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QLabel#DowLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 400; }}
         QLabel#QuarterLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 600; }}
         QFrame[cellRole="day"] {{ background: transparent; border-radius: 8px; }}
-        QFrame[cellRole="day"][weekCurrent="true"] {{ background: {week_bg}; }}
-        QFrame[cellRole="day"]:hover {{ background: {hover}; }}
+        QFrame[cellRole="day"]:hover {{ background: {cell_hover}; }}
         QFrame[cellRole="day"][state="today"] {{ background: {today_bg}; }}
+        QFrame[cellRole="day"][state="today"]:hover {{ background: {today_bg}; }}
 
         QLabel#DayLabel {{ font-size: {FONT_DAY_PX}px; font-weight: 400; color: {text_primary}; }}
         QLabel#DayLabel[today="true"] {{ color: {today_text}; font-weight: 600; }}
         QLabel#DayLabel[dim="true"] {{ color: {dim_text}; }}
 
         QFrame[cellRole="week"] {{ background: transparent; border-radius: 6px; }}
-        QFrame[cellRole="week"][weekCurrent="true"] {{ background: {week_bg}; }}
         QLabel#WeekLabel {{ font-size: {FONT_LABEL_PX}px; font-weight: 400; color: {text_secondary}; }}
     """
 
@@ -515,7 +538,7 @@ class CalendarWindow(QWidget):
         self._year_page_start = self._today_year - 4
 
         self.setWindowTitle("Calendar - week numbers")
-        self.setFixedSize(420, 340)
+        self.setFixedSize(380, 340)
         self.setObjectName("calendarWindow")
         # Transparent outer window so rounded shell corners don't show a square backdrop
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -551,10 +574,10 @@ class CalendarWindow(QWidget):
         self.today_btn.clicked.connect(self.go_today)
 
         top.addWidget(self.month_btn, 1)
-        top.addSpacing(6)
+        top.addSpacing(2)
         top.addWidget(self.prev_btn)
         top.addWidget(self.next_btn)
-        top.addSpacing(6)
+        top.addSpacing(2)
         top.addWidget(self.today_btn)
         shell_layout.addLayout(top)
 
@@ -1111,7 +1134,7 @@ class InfoDialog(QDialog):
         author = QLabel("Author: Przemyslaw Buzdygan")
 
         github = QLabel(
-            'GitHub: <a href="https://www.github.com/pbuzdygan">https://www.github.com/pbuzdygan</a>'
+            'GitHub: <a href="https://pbuzdygan.github.io">https://pbuzdygan.github.io</a>'
         )
         github.setTextFormat(Qt.TextFormat.RichText)
         github.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+Minor UI changes
+- improving light\dark mode
+- improving spacing in entire UI
+- fixing issues with presenting wide week numbers in tray
+
 ## 1.2.1
 
 - Minor UI correction in month picker view, changing order in main menu
