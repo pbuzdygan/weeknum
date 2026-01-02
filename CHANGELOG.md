@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.2.2
+## 1.3.0
+
+Minor UI changes
+- improving light\dark mode
+- improving spacing in entire UI
+- fixing issues with presenting wide week numbers in tray
 
 ## 1.2.1
 
