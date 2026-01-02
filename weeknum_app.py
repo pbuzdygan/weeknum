@@ -187,11 +187,16 @@ def make_week_icon(
 
         # Plain text, no outline
         # Note: AlignCenter can ignore negative glyph bearings at small sizes, causing edge clipping.
-        # Center using the actual tight bounding rect instead.
+        # Center horizontally using the tight bounds (prevents "0" left clipping),
+        # but center vertically using the looser bounds (looks more visually centered).
         p.setPen(text_color if text_color is not None else QColor(0, 0, 0))
+        tight = text_rect
+        loose = fm.boundingRect(txt)
         target_center = QPointF(target.center())
-        text_center = QPointF(text_rect.center())
-        pos = QPointF(target_center.x() - text_center.x(), target_center.y() - text_center.y())
+        pos = QPointF(
+            target_center.x() - QPointF(tight.center()).x(),
+            target_center.y() - QPointF(loose.center()).y(),
+        )
         p.drawText(pos, txt)
 
         p.end()

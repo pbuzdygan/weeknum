@@ -75,7 +75,7 @@ jobs:
 
           $exeName = "WeekNumApp.exe"
           if ($eventName -eq "release" -and $target -eq "dev") {
-            $exeName = "WeekNumApp_dev$ver.exe"
+            $exeName = "WeekNumApp_$ver.exe"
             Rename-Item -Path "dist\\WeekNumApp.exe" -NewName $exeName -Force
           }
 
