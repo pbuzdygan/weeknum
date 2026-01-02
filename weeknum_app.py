@@ -373,7 +373,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         QPushButton#NavButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 6px 10px; font-size: {FONT_NAV_PX}px; min-width: 34px; min-height: 38px;
+            padding: 6px 6px; font-size: {FONT_NAV_PX}px; min-width: 26px; min-height: 38px;
             text-align: center;
             color: {text_primary};
         }}
@@ -562,10 +562,10 @@ class CalendarWindow(QWidget):
         self.today_btn.clicked.connect(self.go_today)
 
         top.addWidget(self.month_btn, 1)
-        top.addSpacing(6)
+        top.addSpacing(2)
         top.addWidget(self.prev_btn)
         top.addWidget(self.next_btn)
-        top.addSpacing(6)
+        top.addSpacing(2)
         top.addWidget(self.today_btn)
         shell_layout.addLayout(top)
 
