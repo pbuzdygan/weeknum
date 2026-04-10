@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+- Reworked the main calendar window layout to use a clearer direct header with month, year, Today, and 1M/3M controls.
+- Added a wider 3-month calendar view with visually separated month panels for better orientation.
+- Improved calendar readability by adding a `Wk` week column header, removing the `W` prefix from week numbers, and strengthening weekend and out-of-month day contrast.
+- Refined the calendar header and footer styling, including a cleaner bottom date line format: `Week XX Friday, 10 April 2026`.
+
 ## 1.3.0
 
 New feature:
