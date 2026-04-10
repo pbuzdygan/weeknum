@@ -414,24 +414,24 @@ def build_styles(theme: Theme) -> dict[str, str]:
 
         QPushButton#NavButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 4px 4px; font-size: {FONT_NAV_PX}px; min-width: 24px; min-height: 30px;
+            padding: 2px 4px; font-size: {FONT_NAV_PX}px; min-width: 22px; min-height: 24px;
             text-align: center;
             color: {text_primary};
         }}
         QPushButton#TodayButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 4px 8px; font-size: {FONT_BODY_PX}px; font-weight: 600; min-height: 30px;
+            padding: 2px 8px; font-size: {FONT_BODY_PX}px; font-weight: 600; min-height: 24px;
             color: {text_primary};
         }}
         QPushButton#ViewButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 3px 8px; font-size: {FONT_BODY_PX}px; min-height: 26px;
+            padding: 2px 8px; font-size: {FONT_BODY_PX}px; min-height: 24px;
             text-align: center;
             color: {text_primary};
         }}
         QPushButton#PinButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 3px 6px; font-size: {FONT_BODY_PX}px; min-height: 26px; min-width: 26px;
+            padding: 2px 6px; font-size: {FONT_BODY_PX}px; min-height: 24px; min-width: 24px;
             text-align: center;
             color: {text_primary};
         }}
@@ -440,38 +440,37 @@ def build_styles(theme: Theme) -> dict[str, str]:
             background: transparent;
             border: none;
             border-radius: 8px;
-            padding: 3px 6px;
-            min-height: 26px;
+            padding: 2px 6px;
+            min-height: 24px;
             color: {text_primary};
         }}
         QComboBox#MonthSelect {{
             font-size: {FONT_BODY_PX}px;
             font-weight: 600;
-            min-width: 94px;
+            min-width: 86px;
         }}
         QSpinBox#YearSpin {{
             font-size: {FONT_BODY_PX}px;
             font-weight: 600;
-            min-width: 58px;
-            padding-right: 14px;
+            min-width: 50px;
+            padding-right: 4px;
         }}
-        QSpinBox#YearSpin::up-button {{
-            subcontrol-origin: border;
-            subcontrol-position: top right;
-            width: 12px;
-        }}
-        QSpinBox#YearSpin::down-button {{
-            subcontrol-origin: border;
-            subcontrol-position: bottom right;
-            width: 12px;
+        QComboBox#MonthSelect QAbstractItemView {{
+            background: {shell_bg};
+            color: {text_primary};
+            border: 1px solid {border};
+            selection-background-color: {hover};
+            selection-color: {text_primary};
+            outline: none;
         }}
         QComboBox#MonthSelect::drop-down {{
             border: none;
-            width: 14px;
+            border-left: 1px solid {border};
+            width: 18px;
         }}
         QComboBox#MonthSelect::down-arrow {{
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
         }}
         QComboBox#MonthSelect:hover,
         QSpinBox#YearSpin:hover {{
@@ -488,10 +487,11 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QPushButton#ViewButton:pressed,
         QPushButton#PinButton:pressed {{ background: {press}; }}
 
-        QLabel#MonthTitle {{ color: {text_primary}; font-size: {FONT_BODY_PX}px; font-weight: 600; }}
+        QLabel#MonthTitle {{ color: {text_primary}; font-size: {FONT_HEADER_PX}px; font-weight: 600; }}
         QLabel#InfoLabel {{ color: {text_secondary}; font-size: {FONT_BODY_PX}px; font-weight: 400; }}
         QLabel#DowLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 400; }}
         QLabel#DowLabel[weekend="true"] {{ color: {weekend_text}; font-weight: 600; }}
+        QFrame[cellRole="dow"] {{ border-bottom: 1px solid {border}; border-radius: 0px; }}
         QFrame[cellRole="day"] {{ background: transparent; border-radius: 8px; }}
         QFrame[cellRole="day"]:hover {{ background: {cell_hover}; }}
         QFrame[cellRole="day"][state="today"] {{ background: {today_bg}; }}
@@ -611,8 +611,8 @@ class CalendarWindow(QWidget):
         self.header_row = QFrame(self.shell)
         self.header_row.setObjectName("HeaderRow")
         top = QHBoxLayout(self.header_row)
-        top.setContentsMargins(6, 2, 6, 2)
-        top.setSpacing(4)
+        top.setContentsMargins(4, 1, 4, 1)
+        top.setSpacing(3)
 
         self.prev_btn = QPushButton("")
         self.next_btn = QPushButton("")
@@ -630,8 +630,15 @@ class CalendarWindow(QWidget):
         self.year_spin.setObjectName("YearSpin")
         self.year_spin.setRange(1900, 2200)
         self.year_spin.setAlignment(Qt.AlignCenter)
-        self.year_spin.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.year_spin.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.year_spin.valueChanged.connect(self._on_year_changed)
+
+        self.prev_year_btn = QPushButton("")
+        self.next_year_btn = QPushButton("")
+        self.prev_year_btn.setObjectName("NavButton")
+        self.next_year_btn.setObjectName("NavButton")
+        self.prev_year_btn.clicked.connect(self.prev_year)
+        self.next_year_btn.clicked.connect(self.next_year)
 
         self.today_btn = QPushButton("Today")
         self.today_btn.setObjectName("TodayButton")
@@ -649,7 +656,9 @@ class CalendarWindow(QWidget):
         top.addWidget(self.prev_btn)
         top.addWidget(self.next_btn)
         top.addWidget(self.month_combo)
+        top.addWidget(self.prev_year_btn)
         top.addWidget(self.year_spin)
+        top.addWidget(self.next_year_btn)
         top.addStretch(1)
         top.addWidget(self.today_btn)
         top.addWidget(self.view_btn)
@@ -663,8 +672,8 @@ class CalendarWindow(QWidget):
         card = QFrame()
         card.setObjectName("CalendarCard")
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(4, 4, 4, 2)
-        card_layout.setSpacing(6)
+        card_layout.setContentsMargins(4, 4, 4, 0)
+        card_layout.setSpacing(4)
 
         self.months_host = QWidget(card)
         self.months_layout = QHBoxLayout(self.months_host)
@@ -707,7 +716,7 @@ class CalendarWindow(QWidget):
 
     def _apply_nav_icons(self):
         color = QColor(255, 255, 255) if self._theme.mode == "dark" else QColor(31, 31, 31)
-        icon_size = QSize(14, 14)
+        icon_size = QSize(12, 12)
 
         self.prev_btn.setText("")
         self.prev_btn.setIcon(make_filled_triangle_icon("left", color))
@@ -716,6 +725,14 @@ class CalendarWindow(QWidget):
         self.next_btn.setText("")
         self.next_btn.setIcon(make_filled_triangle_icon("right", color))
         self.next_btn.setIconSize(icon_size)
+
+        self.prev_year_btn.setText("")
+        self.prev_year_btn.setIcon(make_filled_triangle_icon("left", color))
+        self.prev_year_btn.setIconSize(icon_size)
+
+        self.next_year_btn.setText("")
+        self.next_year_btn.setIcon(make_filled_triangle_icon("right", color))
+        self.next_year_btn.setIconSize(icon_size)
 
     def keyPressEvent(self, e: QKeyEvent):
         if e.key() == Qt.Key_Left:
@@ -753,12 +770,11 @@ class CalendarWindow(QWidget):
     def _apply_picker_widths(self):
         fm = self.month_combo.fontMetrics()
         max_month_width = max(fm.horizontalAdvance(name) for name in ENG_MONTHS)
-        self.month_combo.setFixedWidth(max_month_width + 28)
+        self.month_combo.setFixedWidth(max_month_width + 24)
 
         year_fm = self.year_spin.fontMetrics()
         year_width = year_fm.horizontalAdvance("2222")
-        # 4 digits + spinner arrows area + small padding.
-        self.year_spin.setFixedWidth(year_width + 24)
+        self.year_spin.setFixedWidth(year_width + 12)
 
     def _sync_pin_button(self):
         self.pin_btn.blockSignals(True)
@@ -791,6 +807,14 @@ class CalendarWindow(QWidget):
         self.state.year = year
         self.render()
 
+    def prev_year(self):
+        self.state.year -= 1
+        self.render()
+
+    def next_year(self):
+        self.state.year += 1
+        self.render()
+
     def _month_with_offset(self, year: int, month: int, offset: int) -> tuple[int, int]:
         total = (year * 12 + (month - 1)) + offset
         return total // 12, (total % 12) + 1
@@ -805,7 +829,7 @@ class CalendarWindow(QWidget):
 
     def _set_info_text(self):
         d = date.today()
-        self.info_label.setText(f"Week {iso_week(d):02d} {d.strftime('%A, %d %B %Y')}")
+        self.info_label.setText(f"Week {iso_week(d):02d} · {d.strftime('%A, %d %B %Y')}")
 
     def _build_month_view(self, year: int, month: int) -> QWidget:
         month_panel = QFrame(self.months_host)
@@ -883,7 +907,7 @@ class CalendarWindow(QWidget):
             if pinned:
                 self.raise_()
                 self.activateWindow()
-        QTimer.singleShot(0, self._clear_suppress_hide)
+        QTimer.singleShot(220, self._clear_suppress_hide)
 
     def _clear_suppress_hide(self):
         self._suppress_hide = False
@@ -915,6 +939,7 @@ class CalendarWindow(QWidget):
 
     def dow_cell(self, text: str, weekend: bool = False) -> QFrame:
         frame = QFrame()
+        frame.setProperty("cellRole", "dow")
         lab = QLabel(text)
         lab.setObjectName("DowLabel")
         if weekend:
@@ -1439,6 +1464,7 @@ class TrayApp:
         self.pin_action = QAction("Pin window")
         self.pin_action.setCheckable(True)
         self.pin_action.triggered.connect(self.toggle_pin_window)
+        self._syncing_pin_from_window = False
 
         self.quit_action = QAction("Quit")
         self.quit_action.triggered.connect(self.quit)
@@ -1601,9 +1627,9 @@ class TrayApp:
             self.win.set_pinned(self.pin_action.isChecked())
 
     def _on_window_pin_changed(self, checked: bool):
-        self.pin_action.blockSignals(True)
+        self._syncing_pin_from_window = True
         self.pin_action.setChecked(checked)
-        self.pin_action.blockSignals(False)
+        self._syncing_pin_from_window = False
         self.pin_action.setText("Unpin window" if checked else "Pin window")
 
     def update_tray(self):
@@ -1661,6 +1687,8 @@ class TrayApp:
 
     def toggle_pin_window(self, checked: bool):
         self.pin_action.setText("Unpin window" if checked else "Pin window")
+        if self._syncing_pin_from_window:
+            return
         self.ensure_window()
         self.win.set_pinned(checked)
         if checked:
