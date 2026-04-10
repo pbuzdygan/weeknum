@@ -466,11 +466,16 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QComboBox#MonthSelect::drop-down {{
             border: none;
             border-left: 1px solid {border};
-            width: 18px;
+            width: 20px;
         }}
         QComboBox#MonthSelect::down-arrow {{
-            width: 10px;
-            height: 10px;
+            image: none;
+            width: 0px;
+            height: 0px;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 6px solid {text_secondary};
+            margin-right: 3px;
         }}
         QComboBox#MonthSelect:hover,
         QSpinBox#YearSpin:hover {{
@@ -610,9 +615,21 @@ class CalendarWindow(QWidget):
 
         self.header_row = QFrame(self.shell)
         self.header_row.setObjectName("HeaderRow")
-        top = QHBoxLayout(self.header_row)
-        top.setContentsMargins(4, 1, 4, 1)
-        top.setSpacing(3)
+        header_layout = QVBoxLayout(self.header_row)
+        header_layout.setContentsMargins(4, 1, 4, 1)
+        header_layout.setSpacing(2)
+
+        self.header_top_row = QWidget(self.header_row)
+        self.header_top_layout = QHBoxLayout(self.header_top_row)
+        self.header_top_layout.setContentsMargins(0, 0, 0, 0)
+        self.header_top_layout.setSpacing(3)
+        header_layout.addWidget(self.header_top_row)
+
+        self.header_bottom_row = QWidget(self.header_row)
+        self.header_bottom_layout = QHBoxLayout(self.header_bottom_row)
+        self.header_bottom_layout.setContentsMargins(0, 0, 0, 0)
+        self.header_bottom_layout.setSpacing(3)
+        header_layout.addWidget(self.header_bottom_row)
 
         self.prev_btn = QPushButton("")
         self.next_btn = QPushButton("")
@@ -653,16 +670,6 @@ class CalendarWindow(QWidget):
         self.pin_btn.setCheckable(True)
         self.pin_btn.toggled.connect(self._on_pin_btn_toggled)
 
-        top.addWidget(self.prev_btn)
-        top.addWidget(self.next_btn)
-        top.addWidget(self.month_combo)
-        top.addWidget(self.prev_year_btn)
-        top.addWidget(self.year_spin)
-        top.addWidget(self.next_year_btn)
-        top.addStretch(1)
-        top.addWidget(self.today_btn)
-        top.addWidget(self.view_btn)
-        top.addWidget(self.pin_btn)
         shell_layout.addWidget(self.header_row)
 
         header_sep = QFrame(self.shell)
@@ -692,21 +699,16 @@ class CalendarWindow(QWidget):
         self._apply_picker_widths()
         self._sync_controls()
         self._update_view_button()
+        self._rebuild_header_rows()
         self._update_window_size()
         self._sync_pin_button()
         self.render()
 
     def _apply_window_flags(self):
-        # Flyout behavior (Popup) unless pinned
-        if self._pinned:
-            self.setWindowFlags(
-                Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
-            )
-            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-        else:
-            self.setWindowFlags(
-                Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
-            )
+        # Keep one window type and toggle only top-most flag.
+        # Switching between Popup/Tool during interaction can emit deactivation and hide the flyout.
+        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._pinned)
 
     def apply_theme(self, theme: Theme):
         self._theme = theme
@@ -767,6 +769,39 @@ class CalendarWindow(QWidget):
         self.view_btn.setText(f"{next_count}M")
         self.view_btn.setToolTip(f"Switch to {next_count} month view")
 
+    @staticmethod
+    def _clear_layout(layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+
+    def _rebuild_header_rows(self):
+        self._clear_layout(self.header_top_layout)
+        self._clear_layout(self.header_bottom_layout)
+
+        self.header_bottom_layout.addWidget(self.prev_btn)
+        self.header_bottom_layout.addWidget(self.next_btn)
+        self.header_bottom_layout.addWidget(self.month_combo)
+        self.header_bottom_layout.addWidget(self.year_spin)
+        self.header_bottom_layout.addWidget(self.prev_year_btn)
+        self.header_bottom_layout.addWidget(self.next_year_btn)
+
+        if self._months_count == 1:
+            self.header_top_row.setVisible(True)
+            self.header_top_layout.addStretch(1)
+            self.header_top_layout.addWidget(self.today_btn)
+            self.header_top_layout.addWidget(self.view_btn)
+            self.header_top_layout.addWidget(self.pin_btn)
+            self.header_bottom_layout.addStretch(1)
+        else:
+            self.header_top_row.setVisible(False)
+            self.header_bottom_layout.addStretch(1)
+            self.header_bottom_layout.addWidget(self.today_btn)
+            self.header_bottom_layout.addWidget(self.view_btn)
+            self.header_bottom_layout.addWidget(self.pin_btn)
+
     def _apply_picker_widths(self):
         fm = self.month_combo.fontMetrics()
         max_month_width = max(fm.horizontalAdvance(name) for name in ENG_MONTHS)
@@ -789,7 +824,8 @@ class CalendarWindow(QWidget):
 
     def _update_window_size(self):
         width = 380 if self._months_count == 1 else 1060
-        self.setFixedSize(width, 360)
+        height = 372 if self._months_count == 1 else 360
+        self.setFixedSize(width, height)
 
     def _sync_controls(self):
         self.month_combo.blockSignals(True)
@@ -934,6 +970,7 @@ class CalendarWindow(QWidget):
         self._months_count = 3 if self._months_count == 1 else 1
         self._save_months_count()
         self._update_view_button()
+        self._rebuild_header_rows()
         self._update_window_size()
         self.render()
 

@@ -5,7 +5,12 @@
 - Reworked the main calendar window layout to use a clearer direct header with month, year, Today, and 1M/3M controls.
 - Added a wider 3-month calendar view with visually separated month panels for better orientation.
 - Improved calendar readability by adding a `Wk` week column header, removing the `W` prefix from week numbers, and strengthening weekend and out-of-month day contrast.
-- Refined the calendar header and footer styling, including a cleaner bottom date line format: `Week XX Friday, 10 April 2026`.
+- Refined the calendar header and footer styling, including a cleaner bottom date line format: `Week XX · Friday, 10 April 2026`.
+- Added pin (`📌`) control directly in the main window header and synchronized it with tray menu pin/unpin state.
+- Fixed pin/unpin behavior to avoid unintended flyout hide caused by popup/tool flag switching during pin state changes.
+- Updated month/year navigation layout: year chevrons placed together on the right side of the year field.
+- Improved month dropdown discoverability and styling with a clearer arrow indicator and consistent popup list appearance.
+- Added adaptive header layout: in `1M` view actions (`Today`, `1M/3M`, pin) are shown in a separate top row for better fit and readability.
 
 ## 1.3.0
 
