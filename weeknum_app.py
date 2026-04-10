@@ -939,9 +939,8 @@ class CalendarWindow(QWidget):
         self._apply_window_flags()
         if self.isVisible():
             self.show()
-            if pinned:
-                self.raise_()
-                self.activateWindow()
+            self.raise_()
+            self.activateWindow()
         QTimer.singleShot(220, self._clear_suppress_hide)
 
     def _clear_suppress_hide(self):
@@ -1676,7 +1675,7 @@ class TrayApp:
         self.pin_action.setText("Unpin window" if checked else "Pin window")
 
     def _on_window_layout_changed(self):
-        if self.win and self.win.isVisible() and not self.pin_action.isChecked():
+        if self.win and self.win.isVisible():
             self.position_window_near_tray()
 
     def update_tray(self):
