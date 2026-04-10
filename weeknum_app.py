@@ -337,13 +337,18 @@ def build_styles(theme: Theme) -> dict[str, str]:
         border = "rgba(255,255,255,0.10)"
         text_primary = "#ffffff"
         text_secondary = "#ffffff"
-        dim_text = "rgba(255,255,255,0.72)"
+        dim_text = "rgba(255,255,255,0.42)"
+        weekend_text = "rgb(255,151,151)"
         hover = blend(shell_bg_rgb, accent_tuple, 0.22)
         press = blend(shell_bg_rgb, accent_tuple, 0.32)
         today_bg = f"rgb({accent_rgb})"
         today_text_qc = text_color_for_bg(accent)
         today_text = f"rgb({today_text_qc.red()},{today_text_qc.green()},{today_text_qc.blue()})"
         cell_hover = blend(shell_bg_rgb, accent_tuple, 0.30)
+        month_panel_bg = "rgba(255,255,255,0.04)"
+        month_panel_border = "rgba(255,255,255,0.12)"
+        header_bg = "rgba(255,255,255,0.03)"
+        header_sep = "rgba(255,255,255,0.14)"
         menu_bg = "#202020"
         menu_border = "rgba(255,255,255,0.14)"
         menu_item_hover = blend((32, 32, 32), accent_tuple, 0.26)
@@ -354,13 +359,18 @@ def build_styles(theme: Theme) -> dict[str, str]:
         border = "rgba(0,0,0,0.08)"
         text_primary = "#1f1f1f"
         text_secondary = "#666666"
-        dim_text = "rgba(0,0,0,0.40)"
+        dim_text = "rgba(0,0,0,0.34)"
+        weekend_text = "rgb(176,56,56)"
         hover = blend(shell_bg_rgb, accent_tuple, 0.10)
         press = blend(shell_bg_rgb, accent_tuple, 0.16)
         today_bg = f"rgb({accent_rgb})"
         today_text_qc = text_color_for_bg(accent)
         today_text = f"rgb({today_text_qc.red()},{today_text_qc.green()},{today_text_qc.blue()})"
         cell_hover = blend(shell_bg_rgb, accent_tuple, 0.18)
+        month_panel_bg = "rgba(0,0,0,0.02)"
+        month_panel_border = "rgba(0,0,0,0.08)"
+        header_bg = "rgba(0,0,0,0.015)"
+        header_sep = "rgba(0,0,0,0.10)"
         menu_bg = "#f8f8f8"
         menu_border = "#d0d0d0"
         menu_item_hover = blend((248, 248, 248), accent_tuple, 0.10)
@@ -375,6 +385,21 @@ def build_styles(theme: Theme) -> dict[str, str]:
             font-family: "{FONT_FAMILY}", "Segoe UI";
         }}
         #CalendarCard {{ background: transparent; border: none; }}
+        #HeaderRow {{
+            background: {header_bg};
+            border-radius: 10px;
+        }}
+        #HeaderSeparator {{
+            background: {header_sep};
+            min-height: 1px;
+            max-height: 1px;
+            border: none;
+        }}
+        #MonthPanel {{
+            background: {month_panel_bg};
+            border: 1px solid {month_panel_border};
+            border-radius: 10px;
+        }}
 
         #CalendarShell QPushButton {{
             font-family: "{FONT_FAMILY}", "Segoe UI";
@@ -389,18 +414,18 @@ def build_styles(theme: Theme) -> dict[str, str]:
 
         QPushButton#NavButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 6px 6px; font-size: {FONT_NAV_PX}px; min-width: 26px; min-height: 38px;
+            padding: 4px 4px; font-size: {FONT_NAV_PX}px; min-width: 24px; min-height: 30px;
             text-align: center;
             color: {text_primary};
         }}
         QPushButton#TodayButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 6px 10px; font-size: {FONT_NAV_PX}px; font-weight: 400; min-height: 38px;
+            padding: 4px 8px; font-size: {FONT_BODY_PX}px; font-weight: 600; min-height: 30px;
             color: {text_primary};
         }}
         QPushButton#ViewButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 4px 10px; font-size: {FONT_NAV_PX}px; min-height: 32px;
+            padding: 4px 8px; font-size: {FONT_BODY_PX}px; min-height: 30px;
             text-align: center;
             color: {text_primary};
         }}
@@ -408,27 +433,27 @@ def build_styles(theme: Theme) -> dict[str, str]:
             background: transparent;
             border: none;
             border-radius: 8px;
-            padding: 6px 8px;
-            min-height: 34px;
+            padding: 4px 8px;
+            min-height: 30px;
             color: {text_primary};
         }}
         QComboBox#MonthSelect {{
-            font-size: {FONT_HEADER_PX}px;
+            font-size: {FONT_BODY_PX}px;
             font-weight: 600;
-            min-width: 124px;
+            min-width: 114px;
         }}
         QSpinBox#YearSpin {{
-            font-size: {FONT_HEADER_PX}px;
+            font-size: {FONT_BODY_PX}px;
             font-weight: 600;
-            min-width: 88px;
+            min-width: 76px;
         }}
         QComboBox#MonthSelect::drop-down {{
             border: none;
-            width: 18px;
+            width: 14px;
         }}
         QComboBox#MonthSelect::down-arrow {{
-            width: 9px;
-            height: 9px;
+            width: 8px;
+            height: 8px;
         }}
         QComboBox#MonthSelect:hover,
         QSpinBox#YearSpin:hover {{
@@ -443,17 +468,19 @@ def build_styles(theme: Theme) -> dict[str, str]:
         QPushButton#TodayButton:pressed,
         QPushButton#ViewButton:pressed {{ background: {press}; }}
 
-        QLabel#MonthTitle {{ color: {text_primary}; font-size: {FONT_HEADER_PX}px; font-weight: 600; }}
+        QLabel#MonthTitle {{ color: {text_primary}; font-size: {FONT_BODY_PX}px; font-weight: 600; }}
         QLabel#InfoLabel {{ color: {text_secondary}; font-size: {FONT_BODY_PX}px; font-weight: 400; }}
         QLabel#DowLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 400; }}
+        QLabel#DowLabel[weekend="true"] {{ color: {weekend_text}; font-weight: 600; }}
         QFrame[cellRole="day"] {{ background: transparent; border-radius: 8px; }}
         QFrame[cellRole="day"]:hover {{ background: {cell_hover}; }}
         QFrame[cellRole="day"][state="today"] {{ background: {today_bg}; }}
         QFrame[cellRole="day"][state="today"]:hover {{ background: {today_bg}; }}
 
         QLabel#DayLabel {{ font-size: {FONT_DAY_PX}px; font-weight: 400; color: {text_primary}; }}
-        QLabel#DayLabel[today="true"] {{ color: {today_text}; font-weight: 600; }}
+        QLabel#DayLabel[weekend="true"] {{ color: {weekend_text}; }}
         QLabel#DayLabel[dim="true"] {{ color: {dim_text}; }}
+        QLabel#DayLabel[today="true"] {{ color: {today_text}; font-weight: 600; }}
 
         QFrame[cellRole="week"] {{ background: transparent; border-radius: 6px; }}
         QLabel#WeekLabel {{ font-size: {FONT_LABEL_PX}px; font-weight: 400; color: {text_secondary}; }}
@@ -560,7 +587,10 @@ class CalendarWindow(QWidget):
         shell_layout.setSpacing(8)
         root.addWidget(self.shell)
 
-        top = QHBoxLayout()
+        self.header_row = QFrame(self.shell)
+        self.header_row.setObjectName("HeaderRow")
+        top = QHBoxLayout(self.header_row)
+        top.setContentsMargins(8, 4, 8, 4)
         top.setSpacing(6)
 
         self.prev_btn = QPushButton("")
@@ -595,7 +625,11 @@ class CalendarWindow(QWidget):
         top.addStretch(1)
         top.addWidget(self.today_btn)
         top.addWidget(self.view_btn)
-        shell_layout.addLayout(top)
+        shell_layout.addWidget(self.header_row)
+
+        header_sep = QFrame(self.shell)
+        header_sep.setObjectName("HeaderSeparator")
+        shell_layout.addWidget(header_sep)
 
         card = QFrame()
         card.setObjectName("CalendarCard")
@@ -718,22 +752,22 @@ class CalendarWindow(QWidget):
         self._month_views.clear()
 
     def _set_info_text(self):
-        today = date.today()
-        current = f"{ENG_MONTHS[self.state.month - 1]} {self.state.year}"
-        self.info_label.setText(f"{current} · Today: Week {iso_week(today):02d}")
+        d = date.today()
+        self.info_label.setText(f"Week {iso_week(d):02d} {d.strftime('%A, %d %B %Y')}")
 
     def _build_month_view(self, year: int, month: int) -> QWidget:
-        month_widget = QWidget(self.months_host)
-        layout = QVBoxLayout(month_widget)
-        layout.setContentsMargins(0, 0, 0, 0)
+        month_panel = QFrame(self.months_host)
+        month_panel.setObjectName("MonthPanel")
+        layout = QVBoxLayout(month_panel)
+        layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(4)
 
-        title = QLabel(f"{ENG_MONTHS[month - 1]} {year}", month_widget)
+        title = QLabel(f"{ENG_MONTHS[month - 1]} {year}", month_panel)
         title.setObjectName("MonthTitle")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        grid_widget = QWidget(month_widget)
+        grid_widget = QWidget(month_panel)
         grid = QGridLayout(grid_widget)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(2)
@@ -743,9 +777,9 @@ class CalendarWindow(QWidget):
         for r in range(7):
             grid.setRowStretch(r, 1)
 
-        grid.addWidget(self.week_cell(""), 0, 0)
+        grid.addWidget(self.dow_cell("Wk"), 0, 0)
         for col, name in enumerate(DOW, start=1):
-            grid.addWidget(self.dow_cell(name), 0, col)
+            grid.addWidget(self.dow_cell(name, weekend=(col >= 6)), 0, col)
 
         start = month_grid_start(year, month)
         today = date.today()
@@ -754,19 +788,25 @@ class CalendarWindow(QWidget):
             week_start = start + timedelta(days=7 * r)
             wn = iso_week(week_start)
             is_current_week = (week_start == current_week_start)
-            grid.addWidget(self.week_cell(f"W{wn:02d}", week_current=is_current_week), r + 1, 0)
+            grid.addWidget(self.week_cell(f"{wn:02d}", week_current=is_current_week), r + 1, 0)
             for c in range(7):
                 d = week_start + timedelta(days=c)
                 dim = (d.month != month)
                 highlight = (d == today)
                 grid.addWidget(
-                    self.day_cell(str(d.day), dim=dim, highlight=highlight, week_current=is_current_week),
+                    self.day_cell(
+                        str(d.day),
+                        dim=dim,
+                        highlight=highlight,
+                        week_current=is_current_week,
+                        weekend=(c >= 5),
+                    ),
                     r + 1,
                     c + 1,
                 )
 
         layout.addWidget(grid_widget, 1)
-        return month_widget
+        return month_panel
 
     def go_today(self):
         today = date.today()
@@ -820,10 +860,12 @@ class CalendarWindow(QWidget):
         self._update_window_size()
         self.render()
 
-    def dow_cell(self, text: str) -> QFrame:
+    def dow_cell(self, text: str, weekend: bool = False) -> QFrame:
         frame = QFrame()
         lab = QLabel(text)
         lab.setObjectName("DowLabel")
+        if weekend:
+            lab.setProperty("weekend", "true")
         lab.setAlignment(Qt.AlignCenter)
         lay = QVBoxLayout(frame)
         lay.setContentsMargins(6, 2, 6, 2)
@@ -842,7 +884,14 @@ class CalendarWindow(QWidget):
         lay.addWidget(lab)
         return frame
 
-    def day_cell(self, text: str, dim=False, highlight=False, week_current: bool = False) -> QFrame:
+    def day_cell(
+        self,
+        text: str,
+        dim: bool = False,
+        highlight: bool = False,
+        week_current: bool = False,
+        weekend: bool = False,
+    ) -> QFrame:
         frame = QFrame()
         frame.setProperty("cellRole", "day")
         frame.setProperty("weekCurrent", "true" if week_current else "false")
@@ -855,6 +904,8 @@ class CalendarWindow(QWidget):
             lab.setProperty("today", "true")
         if dim:
             lab.setProperty("dim", "true")
+        if weekend:
+            lab.setProperty("weekend", "true")
         lab.setAlignment(Qt.AlignCenter)
         lay = QVBoxLayout(frame)
         lay.setContentsMargins(2, 2, 2, 2)
