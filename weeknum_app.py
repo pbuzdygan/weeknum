@@ -465,17 +465,12 @@ def build_styles(theme: Theme) -> dict[str, str]:
         }}
         QComboBox#MonthSelect::drop-down {{
             border: none;
-            border-left: 1px solid {border};
-            width: 20px;
+            width: 0px;
         }}
         QComboBox#MonthSelect::down-arrow {{
             image: none;
             width: 0px;
             height: 0px;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 6px solid {text_secondary};
-            margin-right: 3px;
         }}
         QComboBox#MonthSelect:hover,
         QSpinBox#YearSpin:hover {{
@@ -582,13 +577,14 @@ def build_styles(theme: Theme) -> dict[str, str]:
 
 
 class CalendarWindow(QWidget):
-    def __init__(self, state: State, theme: Theme, on_pin_changed=None):
+    def __init__(self, state: State, theme: Theme, on_pin_changed=None, on_layout_changed=None):
         super().__init__()
         self.state = state
         self._pinned = False
         self._suppress_hide = False
         self._theme = theme
         self._on_pin_changed = on_pin_changed
+        self._on_layout_changed = on_layout_changed
         self._settings = QSettings(APP_ORG, APP_NAME)
         self._months_count = self._load_months_count()
         self._month_views: list[QWidget] = []
@@ -707,8 +703,11 @@ class CalendarWindow(QWidget):
     def _apply_window_flags(self):
         # Keep one window type and toggle only top-most flag.
         # Switching between Popup/Tool during interaction can emit deactivation and hide the flyout.
+        was_visible = self.isVisible()
         self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
         self.setWindowFlag(Qt.WindowStaysOnTopHint, self._pinned)
+        if was_visible:
+            self.show()
 
     def apply_theme(self, theme: Theme):
         self._theme = theme
@@ -973,6 +972,8 @@ class CalendarWindow(QWidget):
         self._rebuild_header_rows()
         self._update_window_size()
         self.render()
+        if self.isVisible() and not self._pinned and callable(self._on_layout_changed):
+            self._on_layout_changed()
 
     def dow_cell(self, text: str, weekend: bool = False) -> QFrame:
         frame = QFrame()
@@ -1659,7 +1660,12 @@ class TrayApp:
 
     def ensure_window(self):
         if self.win is None:
-            self.win = CalendarWindow(self.state, self.theme, on_pin_changed=self._on_window_pin_changed)
+            self.win = CalendarWindow(
+                self.state,
+                self.theme,
+                on_pin_changed=self._on_window_pin_changed,
+                on_layout_changed=self._on_window_layout_changed,
+            )
             # sync with pin state
             self.win.set_pinned(self.pin_action.isChecked())
 
@@ -1668,6 +1674,10 @@ class TrayApp:
         self.pin_action.setChecked(checked)
         self._syncing_pin_from_window = False
         self.pin_action.setText("Unpin window" if checked else "Pin window")
+
+    def _on_window_layout_changed(self):
+        if self.win and self.win.isVisible() and not self.pin_action.isChecked():
+            self.position_window_near_tray()
 
     def update_tray(self):
         w = iso_week(date.today())
