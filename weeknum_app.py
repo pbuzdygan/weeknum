@@ -13,7 +13,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequ
 from PySide6.QtWidgets import (
     QApplication, QSystemTrayIcon, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QGridLayout, QFrame, QDialog, QStyle,
-    QComboBox, QSpinBox, QAbstractSpinBox,
+    QStackedLayout,
     QToolTip, QSizePolicy
 )
 
@@ -307,6 +307,10 @@ ENG_MONTHS = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
 ]
+ENG_MONTHS_SHORT = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+]
 DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
@@ -436,7 +440,27 @@ def build_styles(theme: Theme) -> dict[str, str]:
             color: {text_primary};
         }}
         QPushButton#PinButton:checked {{ background: {press}; }}
-        QComboBox#MonthSelect, QSpinBox#YearSpin {{
+        QPushButton#MonthYearButton {{
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            padding: 2px 6px;
+            min-height: 24px;
+            color: {text_primary};
+            font-size: {FONT_BODY_PX}px;
+            font-weight: 600;
+            text-align: left;
+        }}
+        QPushButton#PickerYearButton {{
+            font-size: {FONT_BODY_PX}px;
+            font-weight: 600;
+            min-height: 24px;
+            border: none;
+            border-radius: 8px;
+            padding: 2px 8px;
+            color: {text_primary};
+        }}
+        QPushButton#PickerNavButton {{
             background: transparent;
             border: none;
             border-radius: 8px;
@@ -444,51 +468,50 @@ def build_styles(theme: Theme) -> dict[str, str]:
             min-height: 24px;
             color: {text_primary};
         }}
-        QComboBox#MonthSelect {{
-            font-size: {FONT_BODY_PX}px;
-            font-weight: 600;
-            min-width: 86px;
-        }}
-        QSpinBox#YearSpin {{
-            font-size: {FONT_BODY_PX}px;
-            font-weight: 600;
-            min-width: 50px;
-            padding-right: 4px;
-        }}
-        QComboBox#MonthSelect QAbstractItemView {{
-            background: {shell_bg};
-            color: {text_primary};
-            border: 1px solid {border};
-            selection-background-color: {hover};
-            selection-color: {text_primary};
-            outline: none;
-        }}
-        QComboBox#MonthSelect::drop-down {{
-            border: none;
-            width: 0px;
-        }}
-        QComboBox#MonthSelect::down-arrow {{
-            image: none;
-            width: 0px;
-            height: 0px;
-        }}
-        QComboBox#MonthSelect:hover,
-        QSpinBox#YearSpin:hover {{
-            background: {hover};
-        }}
 
         QPushButton#NavButton:hover,
         QPushButton#TodayButton:hover,
         QPushButton#ViewButton:hover,
-        QPushButton#PinButton:hover {{ background: {hover}; }}
+        QPushButton#PinButton:hover,
+        QPushButton#MonthYearButton:hover,
+        QPushButton#PickerYearButton:hover,
+        QPushButton#PickerNavButton:hover {{ background: {hover}; }}
 
         QPushButton#NavButton:pressed,
         QPushButton#TodayButton:pressed,
         QPushButton#ViewButton:pressed,
-        QPushButton#PinButton:pressed {{ background: {press}; }}
+        QPushButton#PinButton:pressed,
+        QPushButton#MonthYearButton:pressed,
+        QPushButton#PickerYearButton:pressed,
+        QPushButton#PickerNavButton:pressed {{ background: {press}; }}
+
+        QPushButton[month], QPushButton[year] {{
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: {text_primary};
+        }}
+        QPushButton[month] {{
+            padding: 4px 8px;
+            min-height: 24px;
+        }}
+        QPushButton[year] {{
+            padding: 6px 8px;
+            min-height: 28px;
+        }}
+        QPushButton[month]:hover, QPushButton[year]:hover {{
+            background: {hover};
+        }}
+        QPushButton[month]:pressed, QPushButton[year]:pressed {{
+            background: {press};
+        }}
+        QPushButton[currentMonth="true"], QPushButton[currentYear="true"] {{
+            background: {press};
+        }}
 
         QLabel#MonthTitle {{ color: {text_primary}; font-size: {FONT_HEADER_PX}px; font-weight: 600; }}
         QLabel#InfoLabel {{ color: {text_secondary}; font-size: {FONT_BODY_PX}px; font-weight: 400; }}
+        QLabel#QuarterLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 600; }}
         QLabel#DowLabel {{ color: {text_secondary}; font-size: {FONT_LABEL_PX}px; font-weight: 400; }}
         QLabel#DowLabel[weekend="true"] {{ color: {weekend_text}; font-weight: 600; }}
         QFrame[cellRole="dow"] {{ border-bottom: 1px solid {border}; border-radius: 0px; }}
@@ -588,9 +611,15 @@ class CalendarWindow(QWidget):
         self._months_count = self._load_months_count()
         self._month_views: list[QWidget] = []
 
+        today = date.today()
+        self._today_year = today.year
+        self._today_month = today.month
+        self._picker_open = False
+        self._picker_year = self.state.year
+        self._year_page_start = self._picker_year - 4
+
         self.setWindowTitle("Calendar - week numbers")
         self.setObjectName("calendarWindow")
-        # Transparent outer window so rounded shell corners don't show a square backdrop
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
 
@@ -641,17 +670,10 @@ class CalendarWindow(QWidget):
         self.month_nav_layout.addWidget(self.prev_btn)
         self.month_nav_layout.addWidget(self.next_btn)
 
-        self.month_combo = QComboBox()
-        self.month_combo.setObjectName("MonthSelect")
-        self.month_combo.addItems(ENG_MONTHS)
-        self.month_combo.currentIndexChanged.connect(self._on_month_changed)
-
-        self.year_spin = QSpinBox()
-        self.year_spin.setObjectName("YearSpin")
-        self.year_spin.setRange(1900, 2200)
-        self.year_spin.setAlignment(Qt.AlignCenter)
-        self.year_spin.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.year_spin.valueChanged.connect(self._on_year_changed)
+        self.month_year_btn = QPushButton("")
+        self.month_year_btn.setObjectName("MonthYearButton")
+        self.month_year_btn.clicked.connect(self.toggle_picker)
+        self.month_year_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.prev_year_btn = QPushButton("")
         self.next_year_btn = QPushButton("")
@@ -697,6 +719,69 @@ class CalendarWindow(QWidget):
         self.months_layout.setSpacing(8)
         card_layout.addWidget(self.months_host, 1)
 
+        self.picker_widget = QWidget(self.months_host)
+        picker_layout = QVBoxLayout(self.picker_widget)
+        picker_layout.setContentsMargins(0, 0, 0, 0)
+        picker_layout.setSpacing(6)
+
+        picker_top = QHBoxLayout()
+        picker_top.setContentsMargins(0, 0, 0, 0)
+        picker_top.setSpacing(2)
+        self.picker_prev_years_btn = QPushButton("")
+        self.picker_next_years_btn = QPushButton("")
+        self.picker_prev_years_btn.setObjectName("PickerNavButton")
+        self.picker_next_years_btn.setObjectName("PickerNavButton")
+
+        self.picker_year_btn = QPushButton(str(self._picker_year))
+        self.picker_year_btn.setObjectName("PickerYearButton")
+        self.picker_year_btn.clicked.connect(self.show_years_view)
+
+        picker_top.addWidget(self.picker_prev_years_btn)
+        picker_top.addWidget(self.picker_year_btn)
+        picker_top.addWidget(self.picker_next_years_btn)
+        picker_top.addStretch(1)
+        picker_layout.addLayout(picker_top)
+
+        picker_stack_container = QWidget(self.picker_widget)
+        self.picker_stack = QStackedLayout(picker_stack_container)
+        picker_layout.addWidget(picker_stack_container, 1)
+
+        months_widget = QWidget(picker_stack_container)
+        months_layout = QGridLayout(months_widget)
+        months_layout.setContentsMargins(0, 0, 0, 0)
+        months_layout.setHorizontalSpacing(4)
+        months_layout.setVerticalSpacing(2)
+        months_layout.setColumnStretch(0, 1)
+        for c in range(1, 4):
+            months_layout.setColumnStretch(c, 4)
+        self.picker_month_buttons: list[QPushButton] = []
+        for r in range(4):
+            q_label = QLabel(f"Q{r + 1}")
+            q_label.setObjectName("QuarterLabel")
+            q_label.setAlignment(Qt.AlignCenter)
+            q_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            months_layout.addWidget(q_label, r, 0)
+
+        for i, name in enumerate(ENG_MONTHS_SHORT, start=1):
+            btn = QPushButton(name)
+            btn.setProperty("month", i)
+            btn.clicked.connect(self.on_picker_month_clicked)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.picker_month_buttons.append(btn)
+            r = (i - 1) // 3
+            c = (i - 1) % 3
+            months_layout.addWidget(btn, r, c + 1)
+
+        years_widget = QWidget(picker_stack_container)
+        years_layout = QGridLayout(years_widget)
+        years_layout.setContentsMargins(0, 0, 0, 0)
+        years_layout.setHorizontalSpacing(4)
+        years_layout.setVerticalSpacing(4)
+        self.picker_years_grid = years_layout
+
+        self.picker_stack.addWidget(months_widget)
+        self.picker_stack.addWidget(years_widget)
+
         self.info_label = QLabel("")
         self.info_label.setObjectName("InfoLabel")
         self.info_label.setAlignment(Qt.AlignCenter)
@@ -704,13 +789,15 @@ class CalendarWindow(QWidget):
 
         shell_layout.addWidget(card, 1)
 
+        self.picker_prev_years_btn.clicked.connect(self.prev_years_page)
+        self.picker_next_years_btn.clicked.connect(self.next_years_page)
+
         self.apply_theme(self._theme)
-        self._apply_picker_widths()
-        self._sync_controls()
         self._update_view_button()
         self._rebuild_header_rows()
         self._update_window_size()
         self._sync_pin_button()
+        self.render_years()
         self.render()
 
     def apply_theme(self, theme: Theme):
@@ -739,6 +826,14 @@ class CalendarWindow(QWidget):
         self.next_year_btn.setIcon(make_filled_triangle_icon("right", color))
         self.next_year_btn.setIconSize(icon_size)
 
+        self.picker_prev_years_btn.setText("")
+        self.picker_prev_years_btn.setIcon(make_filled_triangle_icon("left", color))
+        self.picker_prev_years_btn.setIconSize(icon_size)
+
+        self.picker_next_years_btn.setText("")
+        self.picker_next_years_btn.setIcon(make_filled_triangle_icon("right", color))
+        self.picker_next_years_btn.setIconSize(icon_size)
+
     def keyPressEvent(self, e: QKeyEvent):
         if e.key() == Qt.Key_Left:
             self.prev_month()
@@ -749,7 +844,6 @@ class CalendarWindow(QWidget):
 
     def changeEvent(self, event):
         if event.type() == QEvent.WindowDeactivate:
-            # Flyout auto-hide is only for the unpinned window mode.
             if not self._pinned and QApplication.activeModalWidget() is None:
                 self.reset_to_default()
                 self.hide()
@@ -785,8 +879,7 @@ class CalendarWindow(QWidget):
         self._clear_layout(self.header_bottom_layout)
 
         self.header_bottom_layout.addWidget(self.month_nav_group)
-        self.header_bottom_layout.addWidget(self.month_combo)
-        self.header_bottom_layout.addWidget(self.year_spin)
+        self.header_bottom_layout.addWidget(self.month_year_btn, 1)
         self.header_bottom_layout.addWidget(self.year_nav_group)
 
         if self._months_count == 1:
@@ -803,15 +896,6 @@ class CalendarWindow(QWidget):
             self.header_bottom_layout.addWidget(self.view_btn)
             self.header_bottom_layout.addWidget(self.pin_btn)
 
-    def _apply_picker_widths(self):
-        fm = self.month_combo.fontMetrics()
-        max_month_width = max(fm.horizontalAdvance(name) for name in ENG_MONTHS)
-        self.month_combo.setFixedWidth(max_month_width + 24)
-
-        year_fm = self.year_spin.fontMetrics()
-        year_width = year_fm.horizontalAdvance("2222")
-        self.year_spin.setFixedWidth(year_width + 12)
-
     def _sync_pin_button(self):
         self.pin_btn.blockSignals(True)
         self.pin_btn.setChecked(self._pinned)
@@ -827,27 +911,95 @@ class CalendarWindow(QWidget):
         height = 372 if self._months_count == 1 else 360
         self.setFixedSize(width, height)
 
-    def _sync_controls(self):
-        self.month_combo.blockSignals(True)
-        self.year_spin.blockSignals(True)
-        self.month_combo.setCurrentIndex(self.state.month - 1)
-        self.year_spin.setValue(self.state.year)
-        self.month_combo.blockSignals(False)
-        self.year_spin.blockSignals(False)
-
-    def _on_month_changed(self, idx: int):
-        self.state.month = idx + 1
+    def toggle_picker(self):
+        self._picker_open = not self._picker_open
+        if self._picker_open:
+            self._picker_year = self.state.year
+            self._year_page_start = self._picker_year - 4
+            self.picker_year_btn.setText(str(self._picker_year))
+            self.render_years()
+            self.update_month_highlight()
+            self.show_months_view()
         self.render()
 
-    def _on_year_changed(self, year: int):
-        self.state.year = year
+    def show_months_view(self):
+        self.picker_stack.setCurrentIndex(0)
+
+    def show_years_view(self):
+        self.picker_stack.setCurrentIndex(1)
+
+    def on_picker_month_clicked(self):
+        btn = self.sender()
+        if not isinstance(btn, QPushButton):
+            return
+        m = int(btn.property("month"))
+        self.state.year = self._picker_year
+        self.state.month = m
+        self._picker_open = False
         self.render()
+
+    def on_picker_year_clicked(self):
+        btn = self.sender()
+        if not isinstance(btn, QPushButton):
+            return
+        self._picker_year = int(btn.property("year"))
+        self.picker_year_btn.setText(str(self._picker_year))
+        self._year_page_start = self._picker_year - 4
+        self.update_month_highlight()
+        self.show_months_view()
+
+    def prev_years_page(self):
+        if self.picker_stack.currentIndex() == 0:
+            self._picker_year -= 1
+            self.picker_year_btn.setText(str(self._picker_year))
+            self._year_page_start = self._picker_year - 4
+            self.update_month_highlight()
+            return
+        self._year_page_start -= 9
+        self.render_years()
+
+    def next_years_page(self):
+        if self.picker_stack.currentIndex() == 0:
+            self._picker_year += 1
+            self.picker_year_btn.setText(str(self._picker_year))
+            self._year_page_start = self._picker_year - 4
+            self.update_month_highlight()
+            return
+        self._year_page_start += 9
+        self.render_years()
+
+    def render_years(self):
+        while self.picker_years_grid.count():
+            item = self.picker_years_grid.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        for i in range(9):
+            year = self._year_page_start + i
+            btn = QPushButton(str(year))
+            btn.setProperty("year", year)
+            btn.setProperty("currentYear", "true" if year == self._today_year else "false")
+            btn.clicked.connect(self.on_picker_year_clicked)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            r = i // 3
+            c = i % 3
+            self.picker_years_grid.addWidget(btn, r, c)
+
+    def update_month_highlight(self):
+        for btn in self.picker_month_buttons:
+            month = int(btn.property("month"))
+            is_current = self._picker_year == self._today_year and month == self._today_month
+            btn.setProperty("currentMonth", "true" if is_current else "false")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
     def prev_year(self):
+        self._picker_open = False
         self.state.year -= 1
         self.render()
 
     def next_year(self):
+        self._picker_open = False
         self.state.year += 1
         self.render()
 
@@ -859,7 +1011,11 @@ class CalendarWindow(QWidget):
         while self.months_layout.count():
             item = self.months_layout.takeAt(0)
             widget = item.widget()
-            if widget:
+            if widget is None:
+                continue
+            if widget is self.picker_widget:
+                widget.setParent(self.months_host)
+            else:
                 widget.deleteLater()
         self._month_views.clear()
 
@@ -920,20 +1076,36 @@ class CalendarWindow(QWidget):
         layout.addWidget(grid_widget, 1)
         return month_panel
 
+    def _build_empty_month_slot(self) -> QWidget:
+        month_panel = QFrame(self.months_host)
+        month_panel.setObjectName("MonthPanel")
+        layout = QVBoxLayout(month_panel)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(0)
+        layout.addStretch(1)
+        return month_panel
+
     def go_today(self):
         today = date.today()
         self.state.year = today.year
         self.state.month = today.month
+        self._picker_open = False
         self.render()
 
     def reset_to_default(self):
-        """Reset flyout to default state: current month."""
         today = date.today()
         self.state.year = today.year
         self.state.month = today.month
+        self._today_year = today.year
+        self._today_month = today.month
+        self._picker_year = self.state.year
+        self._year_page_start = self._picker_year - 4
+        self._picker_open = False
+        self.show_months_view()
         self.render()
 
     def prev_month(self):
+        self._picker_open = False
         y, m = self.state.year, self.state.month
         m -= 1
         if m < 1:
@@ -943,6 +1115,7 @@ class CalendarWindow(QWidget):
         self.render()
 
     def next_month(self):
+        self._picker_open = False
         y, m = self.state.year, self.state.month
         m += 1
         if m > 12:
@@ -1025,9 +1198,18 @@ class CalendarWindow(QWidget):
         return frame
 
     def render(self):
-        self._sync_controls()
+        self.month_year_btn.setText(f"{ENG_MONTHS[self.state.month - 1]} {self.state.year}")
         self._set_info_text()
         self._clear_month_views()
+
+        if self._picker_open:
+            if self._months_count == 1:
+                self.months_layout.addWidget(self.picker_widget, 1)
+            else:
+                self.months_layout.addWidget(self._build_empty_month_slot(), 1)
+                self.months_layout.addWidget(self.picker_widget, 1)
+                self.months_layout.addWidget(self._build_empty_month_slot(), 1)
+            return
 
         offsets = [0] if self._months_count == 1 else [-1, 0, 1]
         for offset in offsets:
