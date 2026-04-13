@@ -1,29 +1,30 @@
 # Changelog
 
-## 1.3.1
+## 2.0.0
+**Major Change Release**
 
+- Major UI chnages:
+  - Improved calendar readability by adding a `Wk` week column header, removing the `W` prefix from week numbers, and strengthening weekend and out-of-month day contrast.
+  - Added a wider 3-month calendar view with visually separated month panels for better orientation.
+  - Redesign the main calendar window layout to use a clearer direct header with month, year, Today, and 1M/3M controls.
+  - Refined the calendar header and footer styling, including a cleaner bottom date line format: `Week XX · Friday, 10 April 2026`.
+   - Added pin (`📌`) control directly in the main window header and synchronized it with tray menu pin/unpin state.
+
+Security improvements:
 - Hardened Windows release security:
   - added hash-locked `requirements-release-win.txt` for the release build
   - switched release dependency installation to `pip --require-hashes --only-binary=:all:`
   - added `SHA256SUMS` publication to GitHub Release assets
   - added GitHub artifact provenance attestation for release artifacts
   - added a separate GitHub Actions dependency audit workflow using `pip-audit`
-- Updated `README.md` with release verification and security documentation.
-- Reworked the main calendar window layout to use a clearer direct header with month, year, Today, and 1M/3M controls.
-- Added a wider 3-month calendar view with visually separated month panels for better orientation.
-- Improved calendar readability by adding a `Wk` week column header, removing the `W` prefix from week numbers, and strengthening weekend and out-of-month day contrast.
-- Refined the calendar header and footer styling, including a cleaner bottom date line format: `Week XX · Friday, 10 April 2026`.
-- Added pin (`📌`) control directly in the main window header and synchronized it with tray menu pin/unpin state.
-- Fixed pin/unpin behavior to avoid unintended flyout hide caused by popup/tool flag switching during pin state changes.
-- Updated month/year navigation layout: year chevrons placed together on the right side of the year field.
-- Improved month dropdown discoverability and styling with a clearer arrow indicator and consistent popup list appearance.
-- Added adaptive header layout: in `1M` view actions (`Today`, `1M/3M`, pin) are shown in a separate top row for better fit and readability.
 - Updated release workflow actions to Node 24-ready versions and enabled `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`.
 - Replaced JS release upload action with `gh release upload` to avoid Node runtime deprecation warnings.
 - Pinned `PyInstaller` to `6.19.0` and enabled `pip` dependency caching in CI to speed up Windows build runs.
 - Pinned application/build dependencies in `requirements.txt` (`PySide6`, `PyInstaller`) for reproducible builds.
+
+Bug fixes:
+- Fixed pin/unpin behavior to avoid unintended flyout hide caused by popup/tool flag switching during pin state changes.
 - Fixed unpinned calendar flyout behavior to hide correctly on outside click (restored popup-style dismiss behavior), preventing the double-click tray toggle issue.
-- Aligned `3M` header controls to the right side as a single grouped set for consistent layout.
 
 ## 1.3.0
 

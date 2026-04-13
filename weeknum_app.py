@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "1.3.0"
+APP_VERSION = "2.0.0"
 
 UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
 UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"
@@ -844,21 +844,12 @@ class CalendarWindow(QWidget):
 
     def _rebuild_header_rows(self):
         self._clear_layout(self.header_layout)
-        if self._months_count == 3:
-            # Keep all controls grouped on the right in 3M mode.
-            self.header_layout.addStretch(1)
-            self.header_layout.addWidget(self.month_nav_group)
-            self.header_layout.addWidget(self.month_year_btn)
-            self.header_layout.addWidget(self.today_btn)
-            self.header_layout.addWidget(self.view_btn)
-            self.header_layout.addWidget(self.pin_btn)
-        else:
-            self.header_layout.addWidget(self.month_nav_group)
-            self.header_layout.addWidget(self.month_year_btn, 1)
-            self.header_layout.addStretch(1)
-            self.header_layout.addWidget(self.today_btn)
-            self.header_layout.addWidget(self.view_btn)
-            self.header_layout.addWidget(self.pin_btn)
+        self.header_layout.addWidget(self.month_year_btn)
+        self.header_layout.addWidget(self.month_nav_group)
+        self.header_layout.addStretch(1)
+        self.header_layout.addWidget(self.today_btn)
+        self.header_layout.addWidget(self.view_btn)
+        self.header_layout.addWidget(self.pin_btn)
 
     def _sync_pin_button(self):
         self.pin_btn.blockSignals(True)
@@ -985,11 +976,10 @@ class CalendarWindow(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(4)
 
-        if self._months_count == 3:
-            title = QLabel(f"{ENG_MONTHS[month - 1]} {year}", month_panel)
-            title.setObjectName("MonthTitle")
-            title.setAlignment(Qt.AlignCenter)
-            layout.addWidget(title)
+        title = QLabel(f"{ENG_MONTHS[month - 1]} {year}", month_panel)
+        title.setObjectName("MonthTitle")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
 
         grid_widget = QWidget(month_panel)
         grid = QGridLayout(grid_widget)
