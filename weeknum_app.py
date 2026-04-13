@@ -86,6 +86,11 @@ FONT_LABEL_PX = 13     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
 
+WINDOW_WIDTH_1M = 380
+WINDOW_WIDTH_3M = 1060
+WINDOW_HEIGHT_1M = 372
+WINDOW_HEIGHT_3M = 360
+
 
 # ---------------- Windows theme (light/dark) + accent color ----------------
 def _read_reg_dword(root, subkey: str, name: str, default: int | None = None) -> int | None:
@@ -645,6 +650,8 @@ class CalendarWindow(QWidget):
         self.header_layout = QHBoxLayout(self.header_row)
         self.header_layout.setContentsMargins(4, 1, 4, 1)
         self.header_layout.setSpacing(3)
+        self.header_left_anchor_spacer = QWidget(self.header_row)
+        self.header_left_anchor_spacer.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
 
         self.prev_btn = QPushButton("")
         self.next_btn = QPushButton("")
@@ -844,8 +851,11 @@ class CalendarWindow(QWidget):
 
     def _rebuild_header_rows(self):
         self._clear_layout(self.header_layout)
-        self.header_layout.addWidget(self.month_year_btn)
+        anchor_offset = (WINDOW_WIDTH_3M - WINDOW_WIDTH_1M) if self._months_count == 3 else 0
+        self.header_left_anchor_spacer.setFixedWidth(anchor_offset)
+        self.header_layout.addWidget(self.header_left_anchor_spacer)
         self.header_layout.addWidget(self.month_nav_group)
+        self.header_layout.addWidget(self.month_year_btn)
         self.header_layout.addStretch(1)
         self.header_layout.addWidget(self.today_btn)
         self.header_layout.addWidget(self.view_btn)
@@ -862,8 +872,8 @@ class CalendarWindow(QWidget):
             self._on_pin_changed(bool(checked))
 
     def _update_window_size(self):
-        width = 380 if self._months_count == 1 else 1060
-        height = 372 if self._months_count == 1 else 360
+        width = WINDOW_WIDTH_1M if self._months_count == 1 else WINDOW_WIDTH_3M
+        height = WINDOW_HEIGHT_1M if self._months_count == 1 else WINDOW_HEIGHT_3M
         self.setFixedSize(width, height)
 
     def toggle_picker(self):
