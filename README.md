@@ -29,6 +29,7 @@ It also includes an optional floating widget on the desktop.
 - optional floating and dragable widget that can be shown/hidden
 - **WeekNum Autostart** can be enabled/disabled from menu
 - **Automatic update check** - WeekNum App will notifiy You that there is a new app release
+- **3 months view** - change view between 1 and 3 months
 
 ---
 ## Demo / Screenshots
@@ -63,19 +64,42 @@ However if You dont trust compiled exe (which is also fine) You can build it loc
 
 And Yes, it is safe to use WeekNum app in corporate/work, unless IT policy is stating different.
 
+## Security and release integrity
+
+WeekNum release pipeline now adds several security controls around the generated Windows package:
+
+- Windows release builds use a dedicated hash-locked dependency file: `requirements-release-win.txt`
+- GitHub Actions runs dependency vulnerability scanning with `pip-audit`
+- each release publishes a `SHA256SUMS` file next to the ZIP package
+- release artifacts are provenance-attested in GitHub Actions
+
+This does **not** replace code signing, so Microsoft Defender SmartScreen may still show the "unknown publisher" warning. It does, however, improve integrity and traceability of the published release artifacts.
+
+### Verify SHA-256 checksum
+
+After downloading the ZIP and matching `SHA256SUMS` file from the release page, You can verify the package in Windows:
+
+```powershell
+Get-FileHash .\WeekNumApp-<tag>-windows-x64.zip -Algorithm SHA256
+```
+
+Compare the printed digest with the line stored in the release `SHA256SUMS` file.
+
+### Verify GitHub artifact attestation
+
+If You use GitHub CLI, You can also verify the build provenance attestation for the downloaded release asset:
+
+```bash
+gh attestation verify WeekNumApp-<tag>-windows-x64.zip --repo pbuzdygan/weeknum
+```
+
 ## Build EXE (Windows)
 
-The simplest option is PyInstaller.
-
-Install:
+The release workflow uses a dedicated Windows lockfile with pinned versions and SHA-256 hashes. To reproduce the release build locally, install dependencies from the same file:
 
 ```bash
-pip install pyinstaller
-```
-alternatively
-
-```bash
-python -m pip install pyinstaller
+python -m pip install --upgrade pip
+python -m pip install --only-binary=:all: --require-hashes -r requirements-release-win.txt
 ```
 
 Build:
@@ -92,16 +116,10 @@ Requirements:
 
 Install dependencies:
 
-for PySide6:
-
 ```bash
-pip install PySide6
+python -m pip install -r requirements.txt
 ```
-alternatively
 
-```bash
-python -m pip install PySide6
-```
 Run:
 
 ```bash

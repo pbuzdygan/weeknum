@@ -1,0 +1,25 @@
+# Secure, hash-locked dependency set used by the Windows release build and audit workflows.
+# Target environment: CPython 3.11 on win_amd64, binary wheels only.
+
+PySide6==6.11.0 \
+    --hash=sha256:9092cb002ca43c64006afb2e0d0f6f51aef17aa737c33a45e502326a081ddcbc
+PyInstaller==6.19.0 \
+    --hash=sha256:b5bb6536c6560330d364d91522250f254b107cf69129d9cbcd0e6727c570be33
+PySide6_Addons==6.11.0 \
+    --hash=sha256:413e6121c24f5ffdce376298059eddecff74aa6d638e94e0f6015b33d29b889e
+PySide6_Essentials==6.11.0 \
+    --hash=sha256:3b3362882ad9389357a80504e600180006a957731fec05786fced7b038461fdf
+shiboken6==6.11.0 \
+    --hash=sha256:483ff78a73c7b3189ca924abc694318084f078bcfeaffa68e32024ff2d025ee1
+altgraph==0.17.5 \
+    --hash=sha256:f3a22400bce1b0c701683820ac4f3b159cd301acab067c51c653e06961600597
+packaging==26.0 \
+    --hash=sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529
+pefile==2024.8.26 \
+    --hash=sha256:76f8b485dcd3b1bb8166f1128d395fa3d87af26360c2358fb75b80019b957c6f
+pyinstaller-hooks-contrib==2026.4 \
+    --hash=sha256:1de1a5e49a878122010b88c7e295502bc69776c157c4a4dc78741a4e6178b00f
+pywin32-ctypes==0.2.3 \
+    --hash=sha256:8a1513379d709975552d202d942d9837758905c8d01eb82b8bcc30918929e7b8
+setuptools==82.0.1 \
+    --hash=sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb
