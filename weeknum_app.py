@@ -88,8 +88,7 @@ FONT_NAV_PX = 16       # Nav arrows
 
 WINDOW_WIDTH_1M = 380
 WINDOW_WIDTH_3M = 1060
-WINDOW_HEIGHT_1M = 372
-WINDOW_HEIGHT_3M = 360
+WINDOW_HEIGHT = 372
 
 
 # ---------------- Windows theme (light/dark) + accent color ----------------
@@ -873,8 +872,7 @@ class CalendarWindow(QWidget):
 
     def _update_window_size(self):
         width = WINDOW_WIDTH_1M if self._months_count == 1 else WINDOW_WIDTH_3M
-        height = WINDOW_HEIGHT_1M if self._months_count == 1 else WINDOW_HEIGHT_3M
-        self.setFixedSize(width, height)
+        self.setFixedSize(width, WINDOW_HEIGHT)
 
     def toggle_picker(self):
         self._picker_open = not self._picker_open
