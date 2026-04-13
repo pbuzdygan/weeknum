@@ -15,6 +15,8 @@
 - Replaced JS release upload action with `gh release upload` to avoid Node runtime deprecation warnings.
 - Pinned `PyInstaller` to `6.19.0` and enabled `pip` dependency caching in CI to speed up Windows build runs.
 - Pinned application/build dependencies in `requirements.txt` (`PySide6`, `PyInstaller`) for reproducible builds.
+- Fixed unpinned calendar flyout behavior to hide correctly on outside click (restored popup-style dismiss behavior), preventing the double-click tray toggle issue.
+- Aligned `3M` header controls to the right side as a single grouped set for consistent layout.
 
 ## 1.3.0
 

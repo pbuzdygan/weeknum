@@ -623,9 +623,10 @@ class CalendarWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
 
-        flags = Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
         if self._pinned:
-            flags |= Qt.WindowStaysOnTopHint
+            flags = Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint | Qt.WindowStaysOnTopHint
+        else:
+            flags = Qt.Popup | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
         self.setWindowFlags(flags)
 
         root = QVBoxLayout(self)
@@ -843,12 +844,21 @@ class CalendarWindow(QWidget):
 
     def _rebuild_header_rows(self):
         self._clear_layout(self.header_layout)
-        self.header_layout.addWidget(self.month_nav_group)
-        self.header_layout.addWidget(self.month_year_btn, 1)
-        self.header_layout.addStretch(1)
-        self.header_layout.addWidget(self.today_btn)
-        self.header_layout.addWidget(self.view_btn)
-        self.header_layout.addWidget(self.pin_btn)
+        if self._months_count == 3:
+            # Keep all controls grouped on the right in 3M mode.
+            self.header_layout.addStretch(1)
+            self.header_layout.addWidget(self.month_nav_group)
+            self.header_layout.addWidget(self.month_year_btn)
+            self.header_layout.addWidget(self.today_btn)
+            self.header_layout.addWidget(self.view_btn)
+            self.header_layout.addWidget(self.pin_btn)
+        else:
+            self.header_layout.addWidget(self.month_nav_group)
+            self.header_layout.addWidget(self.month_year_btn, 1)
+            self.header_layout.addStretch(1)
+            self.header_layout.addWidget(self.today_btn)
+            self.header_layout.addWidget(self.view_btn)
+            self.header_layout.addWidget(self.pin_btn)
 
     def _sync_pin_button(self):
         self.pin_btn.blockSignals(True)
