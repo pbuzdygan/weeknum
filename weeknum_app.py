@@ -349,7 +349,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
         month_panel_border = "rgba(255,255,255,0.12)"
         header_bg = "rgba(255,255,255,0.03)"
         header_sep = "rgba(255,255,255,0.14)"
-        menu_bg = "#202020"
+        menu_bg = shell_bg
         menu_border = "rgba(255,255,255,0.14)"
         menu_item_hover = blend((32, 32, 32), accent_tuple, 0.26)
         sep = "rgba(255,255,255,0.10)"
@@ -371,9 +371,9 @@ def build_styles(theme: Theme) -> dict[str, str]:
         month_panel_border = "rgba(0,0,0,0.08)"
         header_bg = "rgba(0,0,0,0.015)"
         header_sep = "rgba(0,0,0,0.10)"
-        menu_bg = "#f8f8f8"
+        menu_bg = shell_bg
         menu_border = "#d0d0d0"
-        menu_item_hover = blend((248, 248, 248), accent_tuple, 0.10)
+        menu_item_hover = blend(shell_bg_rgb, accent_tuple, 0.10)
         sep = "#e0e0e0"
 
     calendar_qss = f"""
@@ -942,14 +942,24 @@ class CalendarWindow(QWidget):
         self.render()
 
     def toggle_months_view(self):
+        was_visible = self.isVisible()
+        if was_visible:
+            self.setWindowOpacity(0.0)
+
         self._months_count = 3 if self._months_count == 1 else 1
         self._save_months_count()
         self._update_view_button()
         self._rebuild_header_rows()
         self._update_window_size()
-        self.render()
-        if self.isVisible() and not self._pinned and callable(self._on_layout_changed):
+        if was_visible and callable(self._on_layout_changed):
             self._on_layout_changed()
+        self.render()
+        if was_visible:
+            QTimer.singleShot(0, self._restore_window_opacity)
+
+    def _restore_window_opacity(self):
+        if self.isVisible():
+            self.setWindowOpacity(1.0)
 
     def dow_cell(self, text: str, weekend: bool = False) -> QFrame:
         frame = QFrame()
@@ -1669,7 +1679,8 @@ class TrayApp:
 
     def _on_window_pin_changed(self, checked: bool):
         is_visible = bool(self.win and self.win.isVisible())
-        self._recreate_window(bool(checked), show_window=is_visible, preserve_position=is_visible)
+        should_show = bool(checked) and is_visible
+        self._recreate_window(bool(checked), show_window=should_show, preserve_position=should_show)
 
     def _on_window_layout_changed(self):
         if self.win and self.win.isVisible():
