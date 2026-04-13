@@ -2,6 +2,13 @@
 
 ## 1.3.1
 
+- Hardened Windows release security:
+  - added hash-locked `requirements-release-win.txt` for the release build
+  - switched release dependency installation to `pip --require-hashes --only-binary=:all:`
+  - added `SHA256SUMS` publication to GitHub Release assets
+  - added GitHub artifact provenance attestation for release artifacts
+  - added a separate GitHub Actions dependency audit workflow using `pip-audit`
+- Updated `README.md` with release verification and security documentation.
 - Reworked the main calendar window layout to use a clearer direct header with month, year, Today, and 1M/3M controls.
 - Added a wider 3-month calendar view with visually separated month panels for better orientation.
 - Improved calendar readability by adding a `Wk` week column header, removing the `W` prefix from week numbers, and strengthening weekend and out-of-month day contrast.

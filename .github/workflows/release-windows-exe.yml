@@ -10,6 +10,8 @@ env:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 jobs:
   build-windows-exe:
@@ -25,17 +27,19 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          cache-dependency-path: "requirements.txt"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-release-win.txt
 
       - name: Install dependencies
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          if (Test-Path "requirements.txt") {
-            $req = Get-Content "requirements.txt" -Raw -ErrorAction SilentlyContinue
+          if (Test-Path "requirements-release-win.txt") {
+            $req = Get-Content "requirements-release-win.txt" -Raw -ErrorAction SilentlyContinue
             if ($null -ne $req) { $req = $req.Trim() }
             if (-not [string]::IsNullOrWhiteSpace($req)) {
-              python -m pip install -r requirements.txt
+              python -m pip install --only-binary=:all: --require-hashes -r requirements-release-win.txt
             }
           }
 
@@ -93,8 +97,25 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.run_number }}" }
           $zipName = "WeekNumApp-$tag-windows-x64.zip"
           Compress-Archive -Path "dist\\${{ env.EXE_NAME }}" -DestinationPath $zipName -Force
-          Copy-Item -Path $zipName -Destination (Join-Path $env:RUNNER_TEMP $zipName) -Force
           "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Generate SHA256SUMS
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.run_number }}" }
+          $shaName = "WeekNumApp-$tag-SHA256SUMS.txt"
+          $zipHash = (Get-FileHash "${{ env.ZIP_NAME }}" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$zipHash  ${{ env.ZIP_NAME }}" | Out-File -FilePath $shaName -Encoding ascii
+          "SHA256_NAME=$shaName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            ${{ github.workspace }}/${{ env.ZIP_NAME }}
+            ${{ github.workspace }}/${{ env.SHA256_NAME }}
 
       - name: Upload artifacts to Release
         if: github.event_name == 'release'
@@ -106,6 +127,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
           if ([string]::IsNullOrWhiteSpace($tag)) { throw "Release tag is missing." }
           gh release upload $tag "${{ env.ZIP_NAME }}" --clobber
+          gh release upload $tag "${{ env.SHA256_NAME }}" --clobber
 
       - name: Cleanup build artifacts
         if: always()
