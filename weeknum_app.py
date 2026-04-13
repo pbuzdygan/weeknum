@@ -641,21 +641,9 @@ class CalendarWindow(QWidget):
 
         self.header_row = QFrame(self.shell)
         self.header_row.setObjectName("HeaderRow")
-        header_layout = QVBoxLayout(self.header_row)
-        header_layout.setContentsMargins(4, 1, 4, 1)
-        header_layout.setSpacing(2)
-
-        self.header_top_row = QWidget(self.header_row)
-        self.header_top_layout = QHBoxLayout(self.header_top_row)
-        self.header_top_layout.setContentsMargins(0, 0, 0, 0)
-        self.header_top_layout.setSpacing(3)
-        header_layout.addWidget(self.header_top_row)
-
-        self.header_bottom_row = QWidget(self.header_row)
-        self.header_bottom_layout = QHBoxLayout(self.header_bottom_row)
-        self.header_bottom_layout.setContentsMargins(0, 0, 0, 0)
-        self.header_bottom_layout.setSpacing(3)
-        header_layout.addWidget(self.header_bottom_row)
+        self.header_layout = QHBoxLayout(self.header_row)
+        self.header_layout.setContentsMargins(4, 1, 4, 1)
+        self.header_layout.setSpacing(3)
 
         self.prev_btn = QPushButton("")
         self.next_btn = QPushButton("")
@@ -674,19 +662,6 @@ class CalendarWindow(QWidget):
         self.month_year_btn.setObjectName("MonthYearButton")
         self.month_year_btn.clicked.connect(self.toggle_picker)
         self.month_year_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        self.prev_year_btn = QPushButton("")
-        self.next_year_btn = QPushButton("")
-        self.prev_year_btn.setObjectName("NavButton")
-        self.next_year_btn.setObjectName("NavButton")
-        self.prev_year_btn.clicked.connect(self.prev_year)
-        self.next_year_btn.clicked.connect(self.next_year)
-        self.year_nav_group = QWidget(self.header_row)
-        self.year_nav_layout = QHBoxLayout(self.year_nav_group)
-        self.year_nav_layout.setContentsMargins(0, 0, 0, 0)
-        self.year_nav_layout.setSpacing(0)
-        self.year_nav_layout.addWidget(self.prev_year_btn)
-        self.year_nav_layout.addWidget(self.next_year_btn)
 
         self.today_btn = QPushButton("Today")
         self.today_btn.setObjectName("TodayButton")
@@ -818,14 +793,6 @@ class CalendarWindow(QWidget):
         self.next_btn.setIcon(make_filled_triangle_icon("right", color))
         self.next_btn.setIconSize(icon_size)
 
-        self.prev_year_btn.setText("")
-        self.prev_year_btn.setIcon(make_filled_triangle_icon("left", color))
-        self.prev_year_btn.setIconSize(icon_size)
-
-        self.next_year_btn.setText("")
-        self.next_year_btn.setIcon(make_filled_triangle_icon("right", color))
-        self.next_year_btn.setIconSize(icon_size)
-
         self.picker_prev_years_btn.setText("")
         self.picker_prev_years_btn.setIcon(make_filled_triangle_icon("left", color))
         self.picker_prev_years_btn.setIconSize(icon_size)
@@ -875,26 +842,13 @@ class CalendarWindow(QWidget):
                 widget.setParent(None)
 
     def _rebuild_header_rows(self):
-        self._clear_layout(self.header_top_layout)
-        self._clear_layout(self.header_bottom_layout)
-
-        self.header_bottom_layout.addWidget(self.month_nav_group)
-        self.header_bottom_layout.addWidget(self.month_year_btn, 1)
-        self.header_bottom_layout.addWidget(self.year_nav_group)
-
-        if self._months_count == 1:
-            self.header_top_row.setVisible(True)
-            self.header_top_layout.addStretch(1)
-            self.header_top_layout.addWidget(self.today_btn)
-            self.header_top_layout.addWidget(self.view_btn)
-            self.header_top_layout.addWidget(self.pin_btn)
-            self.header_bottom_layout.addStretch(1)
-        else:
-            self.header_top_row.setVisible(False)
-            self.header_bottom_layout.addStretch(1)
-            self.header_bottom_layout.addWidget(self.today_btn)
-            self.header_bottom_layout.addWidget(self.view_btn)
-            self.header_bottom_layout.addWidget(self.pin_btn)
+        self._clear_layout(self.header_layout)
+        self.header_layout.addWidget(self.month_nav_group)
+        self.header_layout.addWidget(self.month_year_btn, 1)
+        self.header_layout.addStretch(1)
+        self.header_layout.addWidget(self.today_btn)
+        self.header_layout.addWidget(self.view_btn)
+        self.header_layout.addWidget(self.pin_btn)
 
     def _sync_pin_button(self):
         self.pin_btn.blockSignals(True)
@@ -993,16 +947,6 @@ class CalendarWindow(QWidget):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-    def prev_year(self):
-        self._picker_open = False
-        self.state.year -= 1
-        self.render()
-
-    def next_year(self):
-        self._picker_open = False
-        self.state.year += 1
-        self.render()
-
     def _month_with_offset(self, year: int, month: int, offset: int) -> tuple[int, int]:
         total = (year * 12 + (month - 1)) + offset
         return total // 12, (total % 12) + 1
@@ -1014,6 +958,7 @@ class CalendarWindow(QWidget):
             if widget is None:
                 continue
             if widget is self.picker_widget:
+                widget.hide()
                 widget.setParent(self.months_host)
             else:
                 widget.deleteLater()
@@ -1030,10 +975,11 @@ class CalendarWindow(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(4)
 
-        title = QLabel(f"{ENG_MONTHS[month - 1]} {year}", month_panel)
-        title.setObjectName("MonthTitle")
-        title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        if self._months_count == 3:
+            title = QLabel(f"{ENG_MONTHS[month - 1]} {year}", month_panel)
+            title.setObjectName("MonthTitle")
+            title.setAlignment(Qt.AlignCenter)
+            layout.addWidget(title)
 
         grid_widget = QWidget(month_panel)
         grid = QGridLayout(grid_widget)
@@ -1203,6 +1149,7 @@ class CalendarWindow(QWidget):
         self._clear_month_views()
 
         if self._picker_open:
+            self.picker_widget.show()
             if self._months_count == 1:
                 self.months_layout.addWidget(self.picker_widget, 1)
             else:
@@ -1211,6 +1158,7 @@ class CalendarWindow(QWidget):
                 self.months_layout.addWidget(self._build_empty_month_slot(), 1)
             return
 
+        self.picker_widget.hide()
         offsets = [0] if self._months_count == 1 else [-1, 0, 1]
         for offset in offsets:
             y, m = self._month_with_offset(self.state.year, self.state.month, offset)
