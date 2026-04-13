@@ -577,11 +577,10 @@ def build_styles(theme: Theme) -> dict[str, str]:
 
 
 class CalendarWindow(QWidget):
-    def __init__(self, state: State, theme: Theme, on_pin_changed=None, on_layout_changed=None):
+    def __init__(self, state: State, theme: Theme, pinned: bool = False, on_pin_changed=None, on_layout_changed=None):
         super().__init__()
         self.state = state
-        self._pinned = False
-        self._suppress_hide = False
+        self._pinned = bool(pinned)
         self._theme = theme
         self._on_pin_changed = on_pin_changed
         self._on_layout_changed = on_layout_changed
@@ -595,8 +594,10 @@ class CalendarWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
 
-        # Flyout-like by default (Popup closes on outside click automatically)
-        self._apply_window_flags()
+        flags = Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint
+        if self._pinned:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -700,15 +701,6 @@ class CalendarWindow(QWidget):
         self._sync_pin_button()
         self.render()
 
-    def _apply_window_flags(self):
-        # Keep one window type and toggle only top-most flag.
-        # Switching between Popup/Tool during interaction can emit deactivation and hide the flyout.
-        was_visible = self.isVisible()
-        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, self._pinned)
-        if was_visible:
-            self.show()
-
     def apply_theme(self, theme: Theme):
         self._theme = theme
         styles = build_styles(theme)
@@ -744,9 +736,9 @@ class CalendarWindow(QWidget):
             self.hide()
 
     def changeEvent(self, event):
-        # When pinned we keep the window, otherwise behave like flyout.
         if event.type() == QEvent.WindowDeactivate:
-            if not self._pinned and not self._suppress_hide and QApplication.activeModalWidget() is None:
+            # Flyout auto-hide is only for the unpinned window mode.
+            if not self._pinned and QApplication.activeModalWidget() is None:
                 self.reset_to_default()
                 self.hide()
         super().changeEvent(event)
@@ -817,7 +809,6 @@ class CalendarWindow(QWidget):
         self.pin_btn.setToolTip("Unpin window" if self._pinned else "Pin window")
 
     def _on_pin_btn_toggled(self, checked: bool):
-        self.set_pinned(checked)
         if callable(self._on_pin_changed):
             self._on_pin_changed(bool(checked))
 
@@ -931,20 +922,6 @@ class CalendarWindow(QWidget):
         self.state.year = today.year
         self.state.month = today.month
         self.render()
-
-    def set_pinned(self, pinned: bool):
-        self._pinned = pinned
-        self._sync_pin_button()
-        self._suppress_hide = True
-        self._apply_window_flags()
-        if self.isVisible():
-            self.show()
-            self.raise_()
-            self.activateWindow()
-        QTimer.singleShot(220, self._clear_suppress_hide)
-
-    def _clear_suppress_hide(self):
-        self._suppress_hide = False
 
     def prev_month(self):
         y, m = self.state.year, self.state.month
@@ -1501,7 +1478,6 @@ class TrayApp:
         self.pin_action = QAction("Pin window")
         self.pin_action.setCheckable(True)
         self.pin_action.triggered.connect(self.toggle_pin_window)
-        self._syncing_pin_from_window = False
 
         self.quit_action = QAction("Quit")
         self.quit_action.triggered.connect(self.quit)
@@ -1662,17 +1638,38 @@ class TrayApp:
             self.win = CalendarWindow(
                 self.state,
                 self.theme,
+                pinned=self.pin_action.isChecked(),
                 on_pin_changed=self._on_window_pin_changed,
                 on_layout_changed=self._on_window_layout_changed,
             )
-            # sync with pin state
-            self.win.set_pinned(self.pin_action.isChecked())
+
+    def _set_pin_action_state(self, checked: bool):
+        self.pin_action.blockSignals(True)
+        self.pin_action.setChecked(bool(checked))
+        self.pin_action.blockSignals(False)
+        self.pin_action.setText("Unpin window" if checked else "Pin window")
+
+    def _recreate_window(self, pinned: bool, show_window: bool, preserve_position: bool = False):
+        old_pos = None
+        if self.win is not None:
+            old_pos = self.win.pos()
+            self.win.hide()
+            self.win.deleteLater()
+            self.win = None
+
+        self._set_pin_action_state(pinned)
+        self.ensure_window()
+
+        if show_window:
+            if preserve_position and old_pos is not None:
+                self.win.move(old_pos)
+                self.show_calendar_window(reposition=False)
+            else:
+                self.show_calendar_window(reposition=True)
 
     def _on_window_pin_changed(self, checked: bool):
-        self._syncing_pin_from_window = True
-        self.pin_action.setChecked(checked)
-        self._syncing_pin_from_window = False
-        self.pin_action.setText("Unpin window" if checked else "Pin window")
+        is_visible = bool(self.win and self.win.isVisible())
+        self._recreate_window(bool(checked), show_window=is_visible, preserve_position=is_visible)
 
     def _on_window_layout_changed(self):
         if self.win and self.win.isVisible():
@@ -1732,18 +1729,11 @@ class TrayApp:
             self.show_calendar_window()
 
     def toggle_pin_window(self, checked: bool):
-        self.pin_action.setText("Unpin window" if checked else "Pin window")
-        if self._syncing_pin_from_window:
-            return
-        self.ensure_window()
-        self.win.set_pinned(checked)
-        if checked:
-            self.show_calendar_window()
-        else:
-            self.win.hide()
+        self._recreate_window(bool(checked), show_window=bool(checked), preserve_position=False)
 
-    def show_calendar_window(self):
-        self.position_window_near_tray()
+    def show_calendar_window(self, reposition: bool = True):
+        if reposition:
+            self.position_window_near_tray()
         # small show trick reduces flicker when using Popup
         self.win.setWindowOpacity(0.0)
         self.win.show()
