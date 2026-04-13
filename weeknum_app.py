@@ -414,7 +414,7 @@ def build_styles(theme: Theme) -> dict[str, str]:
 
         QPushButton#NavButton {{
             background: transparent; border: none; border-radius: 8px;
-            padding: 2px 4px; font-size: {FONT_NAV_PX}px; min-width: 22px; min-height: 24px;
+            padding: 1px 2px; font-size: {FONT_NAV_PX}px; min-width: 18px; min-height: 20px;
             text-align: center;
             color: {text_primary};
         }}
@@ -634,6 +634,12 @@ class CalendarWindow(QWidget):
         self.next_btn.setObjectName("NavButton")
         self.prev_btn.clicked.connect(self.prev_month)
         self.next_btn.clicked.connect(self.next_month)
+        self.month_nav_group = QWidget(self.header_row)
+        self.month_nav_layout = QHBoxLayout(self.month_nav_group)
+        self.month_nav_layout.setContentsMargins(0, 0, 0, 0)
+        self.month_nav_layout.setSpacing(0)
+        self.month_nav_layout.addWidget(self.prev_btn)
+        self.month_nav_layout.addWidget(self.next_btn)
 
         self.month_combo = QComboBox()
         self.month_combo.setObjectName("MonthSelect")
@@ -653,6 +659,12 @@ class CalendarWindow(QWidget):
         self.next_year_btn.setObjectName("NavButton")
         self.prev_year_btn.clicked.connect(self.prev_year)
         self.next_year_btn.clicked.connect(self.next_year)
+        self.year_nav_group = QWidget(self.header_row)
+        self.year_nav_layout = QHBoxLayout(self.year_nav_group)
+        self.year_nav_layout.setContentsMargins(0, 0, 0, 0)
+        self.year_nav_layout.setSpacing(0)
+        self.year_nav_layout.addWidget(self.prev_year_btn)
+        self.year_nav_layout.addWidget(self.next_year_btn)
 
         self.today_btn = QPushButton("Today")
         self.today_btn.setObjectName("TodayButton")
@@ -772,12 +784,10 @@ class CalendarWindow(QWidget):
         self._clear_layout(self.header_top_layout)
         self._clear_layout(self.header_bottom_layout)
 
-        self.header_bottom_layout.addWidget(self.prev_btn)
-        self.header_bottom_layout.addWidget(self.next_btn)
+        self.header_bottom_layout.addWidget(self.month_nav_group)
         self.header_bottom_layout.addWidget(self.month_combo)
         self.header_bottom_layout.addWidget(self.year_spin)
-        self.header_bottom_layout.addWidget(self.prev_year_btn)
-        self.header_bottom_layout.addWidget(self.next_year_btn)
+        self.header_bottom_layout.addWidget(self.year_nav_group)
 
         if self._months_count == 1:
             self.header_top_row.setVisible(True)
