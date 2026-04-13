@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: write
 
@@ -13,14 +16,16 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "requirements.txt"
 
       - name: Install dependencies
         shell: pwsh
@@ -33,7 +38,6 @@ jobs:
               python -m pip install -r requirements.txt
             }
           }
-          python -m pip install pyinstaller
 
       - name: Prepare version info
         shell: pwsh
@@ -94,11 +98,14 @@ jobs:
 
       - name: Upload artifacts to Release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ env.ZIP_NAME }}
-          fail_on_unmatched_files: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
+          if ([string]::IsNullOrWhiteSpace($tag)) { throw "Release tag is missing." }
+          gh release upload $tag "${{ env.ZIP_NAME }}" --clobber
 
       - name: Cleanup build artifacts
         if: always()

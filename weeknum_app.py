@@ -600,7 +600,7 @@ class CalendarWindow(QWidget):
         self.setWindowFlags(flags)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
+        root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         self.shell = QFrame()
@@ -1384,7 +1384,7 @@ class FluentMenu(QWidget):
         self._check_color = QColor(31, 31, 31)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(6, 6, 6, 6)
+        root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         self.shell = QFrame(self)

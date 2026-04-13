@@ -11,6 +11,10 @@
 - Updated month/year navigation layout: year chevrons placed together on the right side of the year field.
 - Improved month dropdown discoverability and styling with a clearer arrow indicator and consistent popup list appearance.
 - Added adaptive header layout: in `1M` view actions (`Today`, `1M/3M`, pin) are shown in a separate top row for better fit and readability.
+- Updated release workflow actions to Node 24-ready versions and enabled `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`.
+- Replaced JS release upload action with `gh release upload` to avoid Node runtime deprecation warnings.
+- Pinned `PyInstaller` to `6.19.0` and enabled `pip` dependency caching in CI to speed up Windows build runs.
+- Pinned application/build dependencies in `requirements.txt` (`PySide6`, `PyInstaller`) for reproducible builds.
 
 ## 1.3.0
 
