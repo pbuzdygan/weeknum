@@ -1,5 +1,4 @@
 import json
-import re
 import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -7,7 +6,8 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QSize, QSettings, QEvent, QPointF, QUrl
 from PySide6.QtGui import (
-    QDesktopServices, QIcon, QAction, QKeyEvent, QPixmap, QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
+    QDesktopServices, QIcon, QAction, QActionGroup, QKeyEvent, QPixmap,
+    QPainter, QFont, QColor, QCursor, QPolygonF, QPen, QPainterPath
 )
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
@@ -17,19 +17,19 @@ from PySide6.QtWidgets import (
     QToolTip, QSizePolicy
 )
 
+from weeknum_core import (
+    APP_VERSION,
+    CalendarSizeMode,
+    normalize_size_mode,
+    parse_semver,
+    resolve_calendar_dimensions,
+)
+
 APP_ORG = "WeekNum"
 APP_NAME = "WeekNumApp"
-APP_VERSION = "2.0.0"
 
 UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
 UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"
-
-
-def parse_semver(v: str) -> tuple[int, int, int] | None:
-    m = re.search(r"(\d+)\.(\d+)\.(\d+)", v or "")
-    if not m:
-        return None
-    return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -85,11 +85,6 @@ FONT_DAY_PX = 15       # Calendar days: 13px Regular
 FONT_LABEL_PX = 13     # Week days + WXX + Q Labels: 11px Regular
 FONT_HEADER_PX = 16    # Month/Year header text
 FONT_NAV_PX = 16       # Nav arrows
-
-WINDOW_WIDTH_1M = 380
-WINDOW_WIDTH_3M = 1060
-WINDOW_HEIGHT = 372
-
 
 # ---------------- Windows theme (light/dark) + accent color ----------------
 def _read_reg_dword(root, subkey: str, name: str, default: int | None = None) -> int | None:
@@ -604,7 +599,16 @@ def build_styles(theme: Theme) -> dict[str, str]:
 
 
 class CalendarWindow(QWidget):
-    def __init__(self, state: State, theme: Theme, pinned: bool = False, on_pin_changed=None, on_layout_changed=None):
+    def __init__(
+        self,
+        state: State,
+        theme: Theme,
+        pinned: bool = False,
+        on_pin_changed=None,
+        on_layout_changed=None,
+        size_mode: CalendarSizeMode = CalendarSizeMode.AUTO,
+        available_size: QSize = QSize(1920, 1080),
+    ):
         super().__init__()
         self.state = state
         self._pinned = bool(pinned)
@@ -614,6 +618,8 @@ class CalendarWindow(QWidget):
         self._settings = QSettings(APP_ORG, APP_NAME)
         self._months_count = self._load_months_count()
         self._month_views: list[QWidget] = []
+        self._size_mode = normalize_size_mode(size_mode)
+        self._available_size = QSize(available_size)
 
         today = date.today()
         self._today_year = today.year
@@ -848,9 +854,28 @@ class CalendarWindow(QWidget):
             if widget is not None:
                 widget.setParent(None)
 
+    def _resolved_dimensions(self, months_count: int | None = None):
+        return resolve_calendar_dimensions(
+            self._size_mode,
+            self._months_count if months_count is None else months_count,
+            self._available_size.width(),
+            self._available_size.height(),
+        )
+
+    def set_size_context(self, size_mode, available_size: QSize):
+        self._size_mode = normalize_size_mode(size_mode)
+        self._available_size = QSize(available_size)
+        self._update_window_size()
+        self._rebuild_header_rows()
+
     def _rebuild_header_rows(self):
         self._clear_layout(self.header_layout)
-        anchor_offset = (WINDOW_WIDTH_3M - WINDOW_WIDTH_1M) if self._months_count == 3 else 0
+        if self._months_count == 3:
+            width_1m = self._resolved_dimensions(1).width
+            width_3m = self._resolved_dimensions(3).width
+            anchor_offset = max(0, width_3m - width_1m)
+        else:
+            anchor_offset = 0
         self.header_left_anchor_spacer.setFixedWidth(anchor_offset)
         self.header_layout.addWidget(self.header_left_anchor_spacer)
         self.header_layout.addWidget(self.month_nav_group)
@@ -871,8 +896,8 @@ class CalendarWindow(QWidget):
             self._on_pin_changed(bool(checked))
 
     def _update_window_size(self):
-        width = WINDOW_WIDTH_1M if self._months_count == 1 else WINDOW_WIDTH_3M
-        self.setFixedSize(width, WINDOW_HEIGHT)
+        dimensions = self._resolved_dimensions()
+        self.setFixedSize(dimensions.width, dimensions.height)
 
     def toggle_picker(self):
         self._picker_open = not self._picker_open
@@ -1227,7 +1252,12 @@ class WeekBadge(QWidget):
         self._apply_style(bg, fg)
 
     def clamp_to_screen(self, pos: QPoint) -> QPoint:
-        screen = QApplication.primaryScreen()
+        center = pos + QPoint(self.width() // 2, self.height() // 2)
+        screen = (
+            QApplication.screenAt(center)
+            or QApplication.screenAt(QCursor.pos())
+            or QApplication.primaryScreen()
+        )
         if not screen:
             return pos
         geo = screen.availableGeometry()
@@ -1236,7 +1266,7 @@ class WeekBadge(QWidget):
         return QPoint(x, y)
 
     def move_default(self):
-        screen = QApplication.primaryScreen()
+        screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
         if not screen:
             return
         geo = screen.availableGeometry()
@@ -1437,6 +1467,13 @@ class InfoDialog(QDialog):
                 path.lineTo(size * 0.5, size * 0.2)
                 path.lineTo(size * 0.7, size * 0.38)
                 p.drawPath(path)
+            elif kind == "dot":
+                p.setBrush(color)
+                p.setPen(Qt.NoPen)
+                p.drawEllipse(QPointF(size * 0.5, size * 0.5), size * 0.22, size * 0.22)
+            elif kind == "cross":
+                p.drawLine(QPointF(size * 0.25, size * 0.25), QPointF(size * 0.75, size * 0.75))
+                p.drawLine(QPointF(size * 0.75, size * 0.25), QPointF(size * 0.25, size * 0.75))
             p.end()
             return pm
 
@@ -1446,9 +1483,15 @@ class InfoDialog(QDialog):
                 f'(<a href="{UPDATE_LATEST_URL}">Download</a>)'
             )
             self.update_icon.setPixmap(make_status_icon(QColor(255, 149, 0), "arrow"))
-        else:
+        elif self._update_status == "up_to_date":
             label = "Up to date"
             self.update_icon.setPixmap(make_status_icon(QColor(46, 160, 67), "check"))
+        elif self._update_status in ("unknown", "checking"):
+            label = "Checking for updates…"
+            self.update_icon.setPixmap(make_status_icon(QColor(128, 128, 128), "dot"))
+        else:
+            label = "Unable to check for updates"
+            self.update_icon.setPixmap(make_status_icon(QColor(190, 70, 70), "cross"))
         self.update_status.setText(label)
 
     def changeEvent(self, event):
@@ -1465,6 +1508,7 @@ class MenuItem(QWidget):
         checked: bool,
         on_click,
         check_color: QColor,
+        trailing_text: str = "",
         parent=None
     ):
         super().__init__(parent)
@@ -1491,8 +1535,14 @@ class MenuItem(QWidget):
         self.text_label.setObjectName("MenuText")
         self.text_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 
+        self.trailing_label = QLabel(trailing_text)
+        self.trailing_label.setObjectName("MenuText")
+        self.trailing_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.trailing_label.setVisible(bool(trailing_text))
+
         layout.addWidget(self.check_label)
         layout.addWidget(self.text_label, 1)
+        layout.addWidget(self.trailing_label)
         self.setChecked(checked)
 
     def setCheckColor(self, color: QColor):
@@ -1513,6 +1563,10 @@ class MenuItem(QWidget):
     def setText(self, text: str):
         self.text_label.setText(text)
 
+    def setTrailingText(self, text: str):
+        self.trailing_label.setText(text)
+        self.trailing_label.setVisible(bool(text))
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             if self._on_click:
@@ -1529,6 +1583,8 @@ class FluentMenu(QWidget):
         self.setAttribute(Qt.WA_NoSystemBackground, True)
 
         self._item_to_action = {}
+        self._item_to_submenu = {}
+        self._owner_menu = None
         self._check_color = QColor(31, 31, 31)
 
         root = QVBoxLayout(self)
@@ -1546,6 +1602,8 @@ class FluentMenu(QWidget):
 
     def setStyleSheet(self, style: str):
         super().setStyleSheet(style)
+        for submenu in self._item_to_submenu.values():
+            submenu.setStyleSheet(style)
 
     def add_action(self, action: QAction):
         item = MenuItem(
@@ -1563,6 +1621,26 @@ class FluentMenu(QWidget):
             action.toggled.connect(item.setChecked)
         action.changed.connect(lambda a=action, i=item: i.setText(a.text()))
 
+    def add_submenu(self, text: str, actions: list[QAction]):
+        submenu = FluentMenu()
+        submenu._owner_menu = self
+        submenu.setStyleSheet(self.styleSheet())
+        submenu._check_color = self._check_color
+        for action in actions:
+            submenu.add_action(action)
+
+        item = MenuItem(
+            text,
+            checkable=False,
+            checked=False,
+            on_click=self._on_submenu_clicked,
+            check_color=self._check_color,
+            trailing_text="›",
+            parent=self.shell,
+        )
+        self._layout.addWidget(item)
+        self._item_to_submenu[item] = submenu
+
     def add_separator(self):
         sep = QFrame(self.shell)
         sep.setObjectName("MenuSeparator")
@@ -1575,19 +1653,55 @@ class FluentMenu(QWidget):
             return
         action.trigger()
         self.hide()
+        if self._owner_menu is not None:
+            self._owner_menu.hide()
+
+    def _on_submenu_clicked(self, item: MenuItem):
+        submenu = self._item_to_submenu.get(item)
+        if submenu is None:
+            return
+        for other in self._item_to_submenu.values():
+            if other is not submenu:
+                other.hide()
+        if submenu.isVisible():
+            submenu.hide()
+            return
+        submenu.show_adjacent_to(item, self)
 
     def apply_theme(self, theme: Theme):
         self._check_color = QColor(255, 255, 255) if theme.mode == "dark" else QColor(31, 31, 31)
         for item in self._item_to_action.keys():
             item.setCheckColor(self._check_color)
+        for submenu in self._item_to_submenu.values():
+            submenu.apply_theme(theme)
+
+    def show_adjacent_to(self, item: MenuItem, parent_menu):
+        self.adjustSize()
+        item_top = item.mapToGlobal(QPoint(0, 0))
+        screen = QApplication.screenAt(item_top) or QApplication.primaryScreen()
+        if screen:
+            geo = screen.availableGeometry()
+            right_x = parent_menu.frameGeometry().right() + 4
+            left_x = parent_menu.frameGeometry().left() - self.width() - 4
+            x = right_x if right_x + self.width() <= geo.right() else left_x
+            x = min(max(geo.left(), x), geo.right() - self.width() + 1)
+            y = min(max(geo.top(), item_top.y()), geo.bottom() - self.height() + 1)
+            self.move(QPoint(x, y))
+        else:
+            self.move(item_top)
+        self.show()
+        self.raise_()
+        self.activateWindow()
 
     def show_at(self, global_pos: QPoint):
+        for submenu in self._item_to_submenu.values():
+            submenu.hide()
         self.adjustSize()
         screen = QApplication.screenAt(global_pos) or QApplication.primaryScreen()
         if screen:
             geo = screen.availableGeometry()
-            x = min(max(geo.left(), global_pos.x()), geo.right() - self.width())
-            y = min(max(geo.top(), global_pos.y()), geo.bottom() - self.height())
+            x = min(max(geo.left(), global_pos.x()), geo.right() - self.width() + 1)
+            y = min(max(geo.top(), global_pos.y()), geo.bottom() - self.height() + 1)
             self.move(QPoint(x, y))
         else:
             self.move(global_pos)
@@ -1609,6 +1723,9 @@ class TrayApp:
 
         QSettings.setDefaultFormat(QSettings.IniFormat)
         self.settings = QSettings(APP_ORG, APP_NAME)
+        self.calendar_size_mode = normalize_size_mode(
+            self.settings.value("calendar/size_mode", CalendarSizeMode.AUTO.value)
+        )
 
         now = date.today()
         self.state = State(year=now.year, month=now.month)
@@ -1637,6 +1754,26 @@ class TrayApp:
         self.pin_action.setCheckable(True)
         self.pin_action.triggered.connect(self.toggle_pin_window)
 
+        self.size_action_group = QActionGroup(self.app)
+        self.size_action_group.setExclusive(True)
+        self.size_actions: list[QAction] = []
+        size_labels = (
+            (CalendarSizeMode.AUTO, "Auto (recommended)"),
+            (CalendarSizeMode.COMPACT, "Compact"),
+            (CalendarSizeMode.NORMAL, "Normal"),
+        )
+        for mode, label in size_labels:
+            action = QAction(label)
+            action.setData(mode.value)
+            action.setCheckable(True)
+            action.setChecked(mode == self.calendar_size_mode)
+            action.triggered.connect(
+                lambda checked, selected=mode: self.set_calendar_size_mode(selected)
+                if checked else None
+            )
+            self.size_action_group.addAction(action)
+            self.size_actions.append(action)
+
         self.quit_action = QAction("Quit")
         self.quit_action.triggered.connect(self.quit)
 
@@ -1664,6 +1801,7 @@ class TrayApp:
         self.menu.add_action(self.autostart_action)
         self.menu.add_action(self.toggle_badge_action)
         self.menu.add_action(self.pin_action)
+        self.menu.add_submenu("Calendar size", self.size_actions)
         self.menu.add_separator()
         self.menu.add_action(self.quit_action)
 
@@ -1677,6 +1815,11 @@ class TrayApp:
         )
         self.badge.setVisible(self.toggle_badge_action.isChecked())
         self.badge.apply_theme(self.theme)
+
+        for screen in self.app.screens():
+            self._connect_screen_geometry(screen)
+        self.app.screenAdded.connect(self._connect_screen_geometry)
+        self.app.screenRemoved.connect(self._on_display_configuration_changed)
 
         # Update tray now + periodically
         self.update_tray()
@@ -1714,6 +1857,7 @@ class TrayApp:
         if self._update_checked:
             return
         self._update_checked = True
+        self._set_update_status("checking")
 
         req = QNetworkRequest(QUrl(UPDATE_API_URL))
         req.setRawHeader(b"User-Agent", b"WeekNumApp")
@@ -1737,6 +1881,12 @@ class TrayApp:
         except Exception:
             pass
 
+    def _set_update_status(self, status: str, tag: str | None = None):
+        self._update_status = status
+        self._update_tag = tag
+        if self.info_dialog is not None:
+            self.info_dialog.set_update_status(status, tag)
+
     def _on_update_reply_finished(self):
         reply = self._update_reply
         self._update_reply = None
@@ -1744,16 +1894,17 @@ class TrayApp:
             self._update_timeout.stop()
             self._update_timeout = None
 
-        self._update_status = "up_to_date"
-
         if reply is None:
+            self._set_update_status("check_failed")
             return
 
         try:
             if reply.error() != QNetworkReply.NetworkError.NoError:
+                self._set_update_status("check_failed")
                 return
             raw = bytes(reply.readAll()).decode("utf-8", errors="replace")
         except Exception:
+            self._set_update_status("check_failed")
             return
         finally:
             reply.deleteLater()
@@ -1761,24 +1912,25 @@ class TrayApp:
         try:
             payload = json.loads(raw)
         except Exception:
+            self._set_update_status("check_failed")
             return
 
         tag = payload.get("tag_name") if isinstance(payload, dict) else None
         if not isinstance(tag, str) or not tag.strip():
+            self._set_update_status("check_failed")
             return
 
         remote = parse_semver(tag)
         local = parse_semver(APP_VERSION)
         if remote is None or local is None:
-            self._update_status = "up_to_date"
+            self._set_update_status("check_failed")
             return
 
         if remote <= local:
-            self._update_status = "up_to_date"
+            self._set_update_status("up_to_date")
             return
 
-        self._update_status = "update_available"
-        self._update_tag = tag
+        self._set_update_status("update_available", tag)
         self._update_message_pending = True
         QTimer.singleShot(5500, self._clear_update_message_pending)
         self.tray.showMessage(
@@ -1791,14 +1943,61 @@ class TrayApp:
     def _clear_update_message_pending(self):
         self._update_message_pending = False
 
-    def ensure_window(self):
+    def _connect_screen_geometry(self, screen):
+        screen.availableGeometryChanged.connect(self._on_display_configuration_changed)
+        screen.geometryChanged.connect(self._on_display_configuration_changed)
+        screen.logicalDotsPerInchChanged.connect(self._on_display_configuration_changed)
+
+    def _on_display_configuration_changed(self, *_args):
+        QTimer.singleShot(0, self._refresh_for_display_configuration)
+
+    def _refresh_for_display_configuration(self):
+        if self.badge:
+            self.badge.update_text()
+        if self.win and self.win.isVisible():
+            self.position_window_near_tray(self._screen_for_window())
+
+    def _screen_for_cursor(self):
+        return QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+
+    def _screen_for_window(self):
+        if self.win is not None:
+            screen = QApplication.screenAt(self.win.frameGeometry().center())
+            if screen is not None:
+                return screen
+        return self._screen_for_cursor()
+
+    @staticmethod
+    def _available_size_for_screen(screen) -> QSize:
+        return screen.availableGeometry().size() if screen else QSize(1920, 1080)
+
+    def set_calendar_size_mode(self, mode):
+        self.calendar_size_mode = normalize_size_mode(mode)
+        self.settings.setValue("calendar/size_mode", self.calendar_size_mode.value)
+        self.settings.sync()
+        for action in self.size_actions:
+            action.setChecked(action.data() == self.calendar_size_mode.value)
+
+        if self.win is not None:
+            screen = self._screen_for_window()
+            self.win.set_size_context(
+                self.calendar_size_mode,
+                self._available_size_for_screen(screen),
+            )
+            if self.win.isVisible():
+                self.position_window_near_tray(screen)
+
+    def ensure_window(self, screen=None):
         if self.win is None:
+            screen = screen or self._screen_for_cursor()
             self.win = CalendarWindow(
                 self.state,
                 self.theme,
                 pinned=self.pin_action.isChecked(),
                 on_pin_changed=self._on_window_pin_changed,
                 on_layout_changed=self._on_window_layout_changed,
+                size_mode=self.calendar_size_mode,
+                available_size=self._available_size_for_screen(screen),
             )
 
     def _set_pin_action_state(self, checked: bool):
@@ -1809,6 +2008,7 @@ class TrayApp:
 
     def _recreate_window(self, pinned: bool, show_window: bool, preserve_position: bool = False):
         old_pos = None
+        old_screen = self._screen_for_window()
         if self.win is not None:
             old_pos = self.win.pos()
             self.win.hide()
@@ -1816,7 +2016,7 @@ class TrayApp:
             self.win = None
 
         self._set_pin_action_state(pinned)
-        self.ensure_window()
+        self.ensure_window(old_screen)
 
         if show_window:
             if preserve_position and old_pos is not None:
@@ -1832,7 +2032,7 @@ class TrayApp:
 
     def _on_window_layout_changed(self):
         if self.win and self.win.isVisible():
-            self.position_window_near_tray()
+            self.position_window_near_tray(self._screen_for_window())
 
     def update_tray(self):
         w = iso_week(date.today())
@@ -1905,19 +2105,19 @@ class TrayApp:
         if self.win and self.win.isVisible():
             self.win.setWindowOpacity(1.0)
 
-    def position_window_near_tray(self):
-        self.ensure_window()
-        screen = QApplication.primaryScreen()
+    def position_window_near_tray(self, screen=None):
+        screen = screen or self._screen_for_cursor()
+        self.ensure_window(screen)
         if not screen:
             return
         geo = screen.availableGeometry()
-        self.win.adjustSize()
+        self.win.set_size_context(self.calendar_size_mode, geo.size())
         w = self.win.width()
         h = self.win.height()
         margin = 8
         extra_offset = 24
-        x = geo.right() - w - margin
-        y = geo.bottom() - h - margin - extra_offset
+        x = max(geo.left() + margin, geo.right() - w - margin + 1)
+        y = max(geo.top() + margin, geo.bottom() - h - margin - extra_offset + 1)
         self.win.move(QPoint(x, y))
 
     def set_badge_visible(self, visible: bool):

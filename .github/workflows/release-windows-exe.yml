@@ -46,10 +46,25 @@ jobs:
       - name: Prepare version info
         shell: pwsh
         run: |
+          $appVersion = (python -c "from weeknum_core import APP_VERSION; print(APP_VERSION)").Trim()
+          if ($appVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid APP_VERSION in weeknum_core.py: $appVersion"
+          }
+
           $tag = "${{ github.event.release.tag_name }}"
-          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
-          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "0.0.0" }
-          $ver = $tag.TrimStart("v", "V")
+          if ("${{ github.event_name }}" -eq "release") {
+            $tagVersion = $tag.TrimStart("v", "V")
+            if ($tagVersion -match '^(\d+\.\d+\.\d+)') {
+              $releaseVersion = $Matches[1]
+            } else {
+              throw "Release tag does not contain a semantic version: $tag"
+            }
+            if ($releaseVersion -ne $appVersion) {
+              throw "Release tag version $releaseVersion does not match APP_VERSION $appVersion"
+            }
+          }
+
+          $ver = $appVersion
           $major = 0; $minor = 0; $patch = 0; $build = 0
           if ($ver -match '^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?') {
             $major = [int]$Matches[1]

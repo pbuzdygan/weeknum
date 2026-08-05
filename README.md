@@ -30,6 +30,7 @@ It also includes an optional floating widget on the desktop.
 - **WeekNum Autostart** can be enabled/disabled from menu
 - **Automatic update check** - WeekNum App will notifiy You that there is a new app release
 - **3 months view** - change view between 1 and 3 months
+- responsive calendar sizing with **Auto**, **Compact**, and **Normal** profiles
 
 ---
 ## Demo / Screenshots
@@ -128,8 +129,10 @@ python weeknum_app.py
 
 ## Configuration and data
 
-The app stores settings with QSettings (for example, widget position and
-visibility). Data is saved under the user's profile.
+The app stores settings with QSettings (for example, calendar size, widget
+position, and visibility). Data is saved under the user's profile. The default
+**Auto** calendar size switches to the Compact profile when the Normal window
+would take too much of the current monitor's work area.
 
 ## Buy Me a Coffee
 If You like results of my efforts, feel free to show that by supporting me.

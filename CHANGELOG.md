@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Added Auto, Compact, and Normal calendar size profiles in a new tray submenu.
+- Added adaptive sizing based on the active monitor's available work area.
+- Fixed calendar and widget placement across multiple monitors.
+- Unified the application and Windows executable version source.
+- Improved update status reporting when the network check fails.
+- Added unit tests and pull-request syntax/test checks.
+
 ## 2.0.0
 **Major Change Release**
 
