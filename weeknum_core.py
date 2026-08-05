@@ -5,7 +5,7 @@ import re
 
 # Keep the application version in one place. The release workflow reads this
 # value and verifies that it matches the release tag.
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 
 try:
     from weeknum_build import BUILD_VERSION as DISPLAY_VERSION
