@@ -1604,6 +1604,7 @@ class FluentMenu(QWidget):
         self._item_to_action = {}
         self._item_to_submenu = {}
         self._owner_menu = None
+        self._keep_owner_open_on_hide = False
         self._check_color = QColor(31, 31, 31)
 
         root = QVBoxLayout(self)
@@ -1671,9 +1672,30 @@ class FluentMenu(QWidget):
         if not action:
             return
         action.trigger()
+        root_menu = self._owner_menu if self._owner_menu is not None else self
+        root_menu.hide()
+
+    def _hide_without_closing_owner(self):
+        if not self.isVisible():
+            return
+        self._keep_owner_open_on_hide = True
         self.hide()
-        if self._owner_menu is not None:
-            self._owner_menu.hide()
+
+    def hideEvent(self, event):
+        close_owner = (
+            self._owner_menu is not None
+            and not self._keep_owner_open_on_hide
+            and self._owner_menu.isVisible()
+        )
+        self._keep_owner_open_on_hide = False
+
+        if self._owner_menu is None:
+            for submenu in self._item_to_submenu.values():
+                submenu._hide_without_closing_owner()
+
+        super().hideEvent(event)
+        if close_owner:
+            QTimer.singleShot(0, self._owner_menu.hide)
 
     def _on_submenu_clicked(self, item: MenuItem):
         submenu = self._item_to_submenu.get(item)
@@ -1681,9 +1703,9 @@ class FluentMenu(QWidget):
             return
         for other in self._item_to_submenu.values():
             if other is not submenu:
-                other.hide()
+                other._hide_without_closing_owner()
         if submenu.isVisible():
-            submenu.hide()
+            submenu._hide_without_closing_owner()
             return
         submenu.show_adjacent_to(item, self)
 
@@ -1714,7 +1736,7 @@ class FluentMenu(QWidget):
 
     def show_at(self, global_pos: QPoint):
         for submenu in self._item_to_submenu.values():
-            submenu.hide()
+            submenu._hide_without_closing_owner()
         self.adjustSize()
         screen = QApplication.screenAt(global_pos) or QApplication.primaryScreen()
         if screen:

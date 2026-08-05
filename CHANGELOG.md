@@ -9,6 +9,7 @@ New feature:
 Bug fixes:
 - Fixed calendar and widget placement across multiple monitors.
 - Improved update status reporting when the network check fails.
+- Fixed the tray submenu leaving its parent menu visible after an outside click.
 
 Security improvements:
 - Updated PySide6, PyInstaller, and the fully hashed Windows release dependency set.
