@@ -1,5 +1,5 @@
 # This file is used by PyInstaller to embed Windows version metadata.
-# The CI workflow replaces __VERSION_STR__ and __VERSION_TUPLE__ with the tag.
+# The CI workflow resolves stable and dev tags into these version values.
 VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=(__VERSION_TUPLE__),

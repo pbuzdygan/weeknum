@@ -4,9 +4,15 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to rebuild and upload, e.g. dev0.21"
+        required: false
+        type: string
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
 
 permissions:
   contents: write
@@ -18,12 +24,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
+          ref: ${{ inputs.release_tag || github.ref }}
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
           cache: "pip"
@@ -34,7 +42,7 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip==26.2.1
           if (Test-Path "requirements-release-win.txt") {
             $req = Get-Content "requirements-release-win.txt" -Raw -ErrorAction SilentlyContinue
             if ($null -ne $req) { $req = $req.Trim() }
@@ -46,19 +54,20 @@ jobs:
       - name: Prepare version info
         shell: pwsh
         run: |
-          $tag = "${{ github.event.release.tag_name }}"
-          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
-          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "0.0.0" }
-          $ver = $tag.TrimStart("v", "V")
-          $major = 0; $minor = 0; $patch = 0; $build = 0
-          if ($ver -match '^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?') {
-            $major = [int]$Matches[1]
-            $minor = [int]$Matches[2]
-            $patch = [int]$Matches[3]
-            if ($Matches[4]) { $build = [int]$Matches[4] }
+          $versionJson = python -c "import json, os; from dataclasses import asdict; from weeknum_core import resolve_build_version; print(json.dumps(asdict(resolve_build_version(os.environ.get('RELEASE_TAG')))))"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to resolve build version for tag: $env:RELEASE_TAG"
           }
-          $versionTuple = "$major, $minor, $patch, $build"
-          $versionStr = "$major.$minor.$patch.$build"
+
+          $versionInfo = $versionJson | ConvertFrom-Json
+          $versionTuple = $versionInfo.file_version -join ", "
+          $versionStr = $versionInfo.product_version
+          "BUILD_IS_DEVELOPMENT=$($versionInfo.is_development.ToString().ToLowerInvariant())" `
+            | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          "BUILD_VERSION = '$versionStr'" `
+            | Set-Content "weeknum_build.py" -Encoding utf8
+
           (Get-Content "version_info.txt" -Raw) `
             -replace "__VERSION_TUPLE__", $versionTuple `
             -replace "__VERSION_STR__", $versionStr `
@@ -72,17 +81,13 @@ jobs:
       - name: Name EXE (dev releases)
         shell: pwsh
         run: |
-          $eventName = "${{ github.event_name }}"
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = $env:RELEASE_TAG
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "0.0.0" }
           $ver = $tag.TrimStart("v", "V")
 
-          $target = "${{ github.event.release.target_commitish }}"
-          if ([string]::IsNullOrWhiteSpace($target)) { $target = "${{ github.ref_name }}" }
-
           $exeName = "WeekNumApp.exe"
-          if ($eventName -eq "release" -and $target -eq "dev") {
+          if ($env:BUILD_IS_DEVELOPMENT -eq "true") {
             $exeName = "WeekNumApp_$ver.exe"
             Rename-Item -Path "dist\\WeekNumApp.exe" -NewName $exeName -Force
           }
@@ -92,7 +97,7 @@ jobs:
       - name: Package (zip)
         shell: pwsh
         run: |
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = $env:RELEASE_TAG
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.run_number }}" }
           $zipName = "WeekNumApp-$tag-windows-x64.zip"
@@ -102,7 +107,7 @@ jobs:
       - name: Generate SHA256SUMS
         shell: pwsh
         run: |
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = $env:RELEASE_TAG
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.run_number }}" }
           $shaName = "WeekNumApp-$tag-SHA256SUMS.txt"
@@ -111,26 +116,30 @@ jobs:
           "SHA256_NAME=$shaName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Attest release artifacts
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
           subject-path: |
             ${{ github.workspace }}/${{ env.ZIP_NAME }}
             ${{ github.workspace }}/${{ env.SHA256_NAME }}
 
       - name: Upload artifacts to Release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.release_tag != ''
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ github.event.release.tag_name }}"
-          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
+          $tag = $env:RELEASE_TAG
           if ([string]::IsNullOrWhiteSpace($tag)) { throw "Release tag is missing." }
-          gh release upload $tag "${{ env.ZIP_NAME }}" --clobber
-          gh release upload $tag "${{ env.SHA256_NAME }}" --clobber
+          if ($env:BUILD_IS_DEVELOPMENT -eq "true") {
+            gh release upload $tag "${{ env.ZIP_NAME }}" "${{ env.SHA256_NAME }}" --clobber
+          } else {
+            # Stable assets are intentionally append-only. A rerun fails instead of
+            # silently replacing a package that users may have already verified.
+            gh release upload $tag "${{ env.ZIP_NAME }}" "${{ env.SHA256_NAME }}"
+          }
 
       - name: Cleanup build artifacts
         if: always()
         shell: pwsh
         run: |
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "build", "dist", "__pycache__", "installer.wxs"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "build", "dist", "__pycache__", "installer.wxs", "weeknum_build.py"
