@@ -1,16 +1,15 @@
 # Changelog
 
-## Unreleased
+## 2.1.0
 
+New feature:
 - Added Auto, Compact, and Normal calendar size profiles in a new tray submenu.
 - Added adaptive sizing based on the active monitor's available work area.
+
+Bug fixes:
 - Fixed calendar and widget placement across multiple monitors.
-- Unified the application and Windows executable version source.
-- Restored support for `devN.N` release tags in Windows builds.
-- Fixed clipped weekday labels in the Compact three-month view.
-- Kept the calendar on its current monitor when switching between 1M and 3M.
 - Improved update status reporting when the network check fails.
-- Added unit tests and pull-request syntax/test checks.
+
 
 ## 2.0.0
 **Major Change Release**
