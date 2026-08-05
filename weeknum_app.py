@@ -1,3 +1,4 @@
+import html
 import json
 import sys
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ APP_NAME = "WeekNumApp"
 
 UPDATE_API_URL = "https://api.github.com/repos/pbuzdygan/weeknum/releases/latest"
 UPDATE_LATEST_URL = "https://github.com/pbuzdygan/weeknum/releases/latest"
+UPDATE_RESPONSE_MAX_BYTES = 256 * 1024
 
 def resource_path(*parts: str) -> str:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -1494,8 +1496,9 @@ class InfoDialog(QDialog):
             return pm
 
         if self._update_status == "update_available" and self._update_tag:
+            safe_tag = html.escape(self._update_tag, quote=True)
             label = (
-                f'New version available: {self._update_tag} '
+                f'New version available: {safe_tag} '
                 f'(<a href="{UPDATE_LATEST_URL}">Download</a>)'
             )
             self.update_icon.setPixmap(make_status_icon(QColor(255, 149, 0), "arrow"))
@@ -1847,7 +1850,7 @@ class TrayApp:
 
         # Theme watcher: keep light/dark in sync with system
         self.theme_timer = QTimer()
-        self.theme_timer.setInterval(2000)  # 2s; cheap (reads registry)
+        self.theme_timer.setInterval(5000)
         self.theme_timer.timeout.connect(self.refresh_theme_if_changed)
         self.theme_timer.start()
 
@@ -1882,6 +1885,11 @@ class TrayApp:
 
         reply = self._nam.get(req)
         self._update_reply = reply
+        reply.downloadProgress.connect(
+            lambda received, total, current=reply: self._limit_update_reply(
+                current, received, total
+            )
+        )
         reply.finished.connect(self._on_update_reply_finished)
 
         timeout = QTimer(self.app)
@@ -1889,6 +1897,15 @@ class TrayApp:
         timeout.timeout.connect(lambda r=reply: self._abort_update_reply(r))
         timeout.start(5000)
         self._update_timeout = timeout
+
+    @staticmethod
+    def _limit_update_reply(reply: QNetworkReply, received: int, total: int):
+        if received <= UPDATE_RESPONSE_MAX_BYTES and (
+            total < 0 or total <= UPDATE_RESPONSE_MAX_BYTES
+        ):
+            return
+        if reply and reply.isRunning():
+            reply.abort()
 
     def _abort_update_reply(self, reply: QNetworkReply):
         try:
@@ -1918,7 +1935,11 @@ class TrayApp:
             if reply.error() != QNetworkReply.NetworkError.NoError:
                 self._set_update_status("check_failed")
                 return
-            raw = bytes(reply.readAll()).decode("utf-8", errors="replace")
+            raw_bytes = bytes(reply.readAll())
+            if len(raw_bytes) > UPDATE_RESPONSE_MAX_BYTES:
+                self._set_update_status("check_failed")
+                return
+            raw = raw_bytes.decode("utf-8", errors="replace")
         except Exception:
             self._set_update_status("check_failed")
             return
@@ -1935,6 +1956,7 @@ class TrayApp:
         if not isinstance(tag, str) or not tag.strip():
             self._set_update_status("check_failed")
             return
+        tag = tag.strip()
 
         remote = parse_semver(tag)
         local = parse_semver(APP_VERSION)

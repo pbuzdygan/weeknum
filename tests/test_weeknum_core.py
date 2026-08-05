@@ -18,8 +18,14 @@ class VersionTests(unittest.TestCase):
     def test_parse_semver_accepts_release_tag(self):
         self.assertEqual(parse_semver("v2.3.4"), (2, 3, 4))
 
+    def test_parse_semver_accepts_release_suffix(self):
+        self.assertEqual(parse_semver("2.3.4+build.7"), (2, 3, 4))
+
     def test_parse_semver_rejects_invalid_value(self):
         self.assertIsNone(parse_semver("development"))
+
+    def test_parse_semver_rejects_version_embedded_in_text(self):
+        self.assertIsNone(parse_semver("release <b>2.3.4</b>"))
 
     def test_local_display_version_defaults_to_application_version(self):
         self.assertEqual(DISPLAY_VERSION, APP_VERSION)

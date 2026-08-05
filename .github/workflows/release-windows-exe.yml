@@ -24,13 +24,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
           ref: ${{ inputs.release_tag || github.ref }}
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
           cache: "pip"
@@ -41,7 +42,7 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip==26.2.1
           if (Test-Path "requirements-release-win.txt") {
             $req = Get-Content "requirements-release-win.txt" -Raw -ErrorAction SilentlyContinue
             if ($null -ne $req) { $req = $req.Trim() }
@@ -115,7 +116,7 @@ jobs:
           "SHA256_NAME=$shaName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Attest release artifacts
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
           subject-path: |
             ${{ github.workspace }}/${{ env.ZIP_NAME }}
@@ -129,8 +130,13 @@ jobs:
         run: |
           $tag = $env:RELEASE_TAG
           if ([string]::IsNullOrWhiteSpace($tag)) { throw "Release tag is missing." }
-          gh release upload $tag "${{ env.ZIP_NAME }}" --clobber
-          gh release upload $tag "${{ env.SHA256_NAME }}" --clobber
+          if ($env:BUILD_IS_DEVELOPMENT -eq "true") {
+            gh release upload $tag "${{ env.ZIP_NAME }}" "${{ env.SHA256_NAME }}" --clobber
+          } else {
+            # Stable assets are intentionally append-only. A rerun fails instead of
+            # silently replacing a package that users may have already verified.
+            gh release upload $tag "${{ env.ZIP_NAME }}" "${{ env.SHA256_NAME }}"
+          }
 
       - name: Cleanup build artifacts
         if: always()

@@ -49,7 +49,10 @@ SCREEN_SAFETY_RATIO = 0.92
 
 
 def parse_semver(value: str) -> tuple[int, int, int] | None:
-    match = re.search(r"(\d+)\.(\d+)\.(\d+)", value or "")
+    match = re.fullmatch(
+        r"v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?",
+        (value or "").strip(),
+    )
     if not match:
         return None
     return int(match.group(1)), int(match.group(2)), int(match.group(3))

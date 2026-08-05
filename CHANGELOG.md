@@ -10,6 +10,14 @@ Bug fixes:
 - Fixed calendar and widget placement across multiple monitors.
 - Improved update status reporting when the network check fails.
 
+Security improvements:
+- Updated PySide6, PyInstaller, and the fully hashed Windows release dependency set.
+- Pinned GitHub Actions to immutable commit SHAs and enabled weekly Dependabot updates for actions.
+- Prevented stable release assets from being overwritten while retaining rebuild support for development releases.
+- Limited and strictly validated GitHub update-check responses.
+
+Minor change:
+- Reduced Windows theme registry polling from every 2 seconds to every 5 seconds.
 
 ## 2.0.0
 **Major Change Release**
