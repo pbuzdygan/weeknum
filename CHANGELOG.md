@@ -6,6 +6,7 @@
 - Added adaptive sizing based on the active monitor's available work area.
 - Fixed calendar and widget placement across multiple monitors.
 - Unified the application and Windows executable version source.
+- Restored support for `devN.N` release tags in Windows builds.
 - Improved update status reporting when the network check fails.
 - Added unit tests and pull-request syntax/test checks.
 

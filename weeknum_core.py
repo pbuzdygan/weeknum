@@ -7,6 +7,11 @@ import re
 # value and verifies that it matches the release tag.
 APP_VERSION = "2.0.0"
 
+try:
+    from weeknum_build import BUILD_VERSION as DISPLAY_VERSION
+except ImportError:
+    DISPLAY_VERSION = APP_VERSION
+
 
 class CalendarSizeMode(str, Enum):
     AUTO = "auto"
@@ -19,6 +24,13 @@ class CalendarDimensions:
     width: int
     height: int
     effective_mode: CalendarSizeMode
+
+
+@dataclass(frozen=True)
+class BuildVersionInfo:
+    file_version: tuple[int, int, int, int]
+    product_version: str
+    is_development: bool
 
 
 NORMAL_DIMENSIONS = {
@@ -41,6 +53,46 @@ def parse_semver(value: str) -> tuple[int, int, int] | None:
     if not match:
         return None
     return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+
+def resolve_build_version(tag: str | None) -> BuildVersionInfo:
+    """Translate stable and project-specific development tags for Windows."""
+    app_version = parse_semver(APP_VERSION)
+    if app_version is None:
+        raise ValueError(f"Invalid APP_VERSION: {APP_VERSION}")
+
+    normalized_tag = (tag or "").strip()
+    if not normalized_tag:
+        return BuildVersionInfo((*app_version, 0), APP_VERSION, False)
+
+    stable_match = re.fullmatch(
+        r"v?(\d+\.\d+\.\d+)(?:[-+][0-9A-Za-z.-]+)?",
+        normalized_tag,
+    )
+    if stable_match:
+        tag_version = stable_match.group(1)
+        if tag_version != APP_VERSION:
+            raise ValueError(
+                f"Release tag version {tag_version} does not match "
+                f"APP_VERSION {APP_VERSION}"
+            )
+        product_version = normalized_tag[1:] if normalized_tag.startswith("v") else normalized_tag
+        return BuildVersionInfo((*app_version, 0), product_version, False)
+
+    development_match = re.fullmatch(r"dev(\d+)\.(\d+)", normalized_tag)
+    if development_match:
+        series = int(development_match.group(1))
+        revision = int(development_match.group(2))
+        build_number = series * 1000 + revision
+        if build_number > 65535:
+            raise ValueError(f"Development tag build number is too large: {normalized_tag}")
+        return BuildVersionInfo(
+            (*app_version, build_number),
+            f"{APP_VERSION}-{normalized_tag}",
+            True,
+        )
+
+    raise ValueError(f"Unsupported release tag: {normalized_tag}")
 
 
 def normalize_size_mode(value) -> CalendarSizeMode:

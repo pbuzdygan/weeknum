@@ -3,8 +3,10 @@ import unittest
 from weeknum_core import (
     APP_VERSION,
     CalendarSizeMode,
+    DISPLAY_VERSION,
     normalize_size_mode,
     parse_semver,
+    resolve_build_version,
     resolve_calendar_dimensions,
 )
 
@@ -18,6 +20,29 @@ class VersionTests(unittest.TestCase):
 
     def test_parse_semver_rejects_invalid_value(self):
         self.assertIsNone(parse_semver("development"))
+
+    def test_local_display_version_defaults_to_application_version(self):
+        self.assertEqual(DISPLAY_VERSION, APP_VERSION)
+
+    def test_stable_release_tag_matches_application_version(self):
+        version = resolve_build_version(f"v{APP_VERSION}")
+        self.assertEqual(version.file_version, (*parse_semver(APP_VERSION), 0))
+        self.assertEqual(version.product_version, APP_VERSION)
+        self.assertFalse(version.is_development)
+
+    def test_development_release_tag_uses_revision_as_windows_build(self):
+        version = resolve_build_version("dev0.21")
+        self.assertEqual(version.file_version, (*parse_semver(APP_VERSION), 21))
+        self.assertEqual(version.product_version, f"{APP_VERSION}-dev0.21")
+        self.assertTrue(version.is_development)
+
+    def test_mismatched_stable_release_tag_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            resolve_build_version("3.0.0")
+
+    def test_unknown_release_tag_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported"):
+            resolve_build_version("nightly")
 
 
 class CalendarSizeTests(unittest.TestCase):

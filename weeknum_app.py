@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from weeknum_core import (
     APP_VERSION,
     CalendarSizeMode,
+    DISPLAY_VERSION,
     normalize_size_mode,
     parse_semver,
     resolve_calendar_dimensions,
@@ -1390,7 +1391,7 @@ class InfoDialog(QDialog):
         github.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         github.setOpenExternalLinks(True)
 
-        version = QLabel(f"Version: {APP_VERSION}")
+        version = QLabel(f"Version: {DISPLAY_VERSION}")
         self.update_icon = QLabel("")
         self.update_icon.setFixedSize(14, 14)
         self.update_icon.setScaledContents(True)
