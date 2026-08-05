@@ -863,11 +863,20 @@ class CalendarWindow(QWidget):
             self._available_size.height(),
         )
 
+    def _uses_compact_three_month_layout(self) -> bool:
+        return (
+            self._months_count == 3
+            and self._resolved_dimensions().effective_mode == CalendarSizeMode.COMPACT
+        )
+
     def set_size_context(self, size_mode, available_size: QSize):
+        used_compact_layout = self._uses_compact_three_month_layout()
         self._size_mode = normalize_size_mode(size_mode)
         self._available_size = QSize(available_size)
         self._update_window_size()
         self._rebuild_header_rows()
+        if used_compact_layout != self._uses_compact_three_month_layout():
+            self.render()
 
     def _rebuild_header_rows(self):
         self._clear_layout(self.header_layout)
@@ -1106,7 +1115,12 @@ class CalendarWindow(QWidget):
 
     def toggle_months_view(self):
         was_visible = self.isVisible()
+        target_screen = None
         if was_visible:
+            target_screen = (
+                QApplication.screenAt(self.frameGeometry().center())
+                or self.screen()
+            )
             self.setWindowOpacity(0.0)
 
         self._months_count = 3 if self._months_count == 1 else 1
@@ -1115,7 +1129,7 @@ class CalendarWindow(QWidget):
         self._rebuild_header_rows()
         self._update_window_size()
         if was_visible and callable(self._on_layout_changed):
-            self._on_layout_changed()
+            self._on_layout_changed(target_screen)
         self.render()
         if was_visible:
             QTimer.singleShot(0, self._restore_window_opacity)
@@ -1133,7 +1147,8 @@ class CalendarWindow(QWidget):
             lab.setProperty("weekend", "true")
         lab.setAlignment(Qt.AlignCenter)
         lay = QVBoxLayout(frame)
-        lay.setContentsMargins(6, 2, 6, 2)
+        horizontal_margin = 2 if self._uses_compact_three_month_layout() else 6
+        lay.setContentsMargins(horizontal_margin, 2, horizontal_margin, 2)
         lay.addWidget(lab)
         return frame
 
@@ -2031,9 +2046,9 @@ class TrayApp:
         should_show = bool(checked) and is_visible
         self._recreate_window(bool(checked), show_window=should_show, preserve_position=should_show)
 
-    def _on_window_layout_changed(self):
+    def _on_window_layout_changed(self, target_screen=None):
         if self.win and self.win.isVisible():
-            self.position_window_near_tray(self._screen_for_window())
+            self.position_window_near_tray(target_screen or self._screen_for_cursor())
 
     def update_tray(self):
         w = iso_week(date.today())

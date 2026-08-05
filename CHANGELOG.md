@@ -7,6 +7,8 @@
 - Fixed calendar and widget placement across multiple monitors.
 - Unified the application and Windows executable version source.
 - Restored support for `devN.N` release tags in Windows builds.
+- Fixed clipped weekday labels in the Compact three-month view.
+- Kept the calendar on its current monitor when switching between 1M and 3M.
 - Improved update status reporting when the network check fails.
 - Added unit tests and pull-request syntax/test checks.
 
