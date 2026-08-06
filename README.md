@@ -45,10 +45,10 @@ It also includes an optional floating widget on the desktop.
   <img src="branding/1_light.png" width="45%" alt="Menu Light">
 </p>
 <p align="center">
-  <img src="branding/2_dark.png" width="45%" alt="Menu Dark">
+  <img src="branding/2_dark.png" width="100%" alt="Menu Dark">
 </p>
 <p align="center">
-  <img src="branding/2_light.png" width="45%" alt="Menu Light">
+  <img src="branding/2_light.png" width="100%" alt="Menu Light">
 </p>
 
 ## Download ready to launch WeekNum app
